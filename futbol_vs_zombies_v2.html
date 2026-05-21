@@ -1,0 +1,1825 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fútbol VS Zombies</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0e0618;--lane:#1a0d2e;--lane2:#150a24;
+  --gold:#f0c040;--purple:#3d2070;--white:#f5f0ff;
+  --red:#e03030;--green:#2ecc71;--gray:#888;
+}
+body{background:var(--bg);font-family:'Inter',sans-serif;color:var(--white);overflow:hidden;user-select:none}
+#ui{position:fixed;top:0;left:0;right:0;z-index:50;
+  display:flex;align-items:center;gap:1rem;
+  padding:10px 20px;background:rgba(14,6,24,0.95);
+  border-bottom:1px solid rgba(240,192,64,0.2);
+}
+#title{font-family:'Bebas Neue',cursive;font-size:1.4rem;letter-spacing:3px;color:var(--gold);flex-shrink:0}
+#hud{display:flex;gap:1.2rem;align-items:center;flex:1}
+.hud-item{display:flex;flex-direction:column;align-items:center;gap:1px}
+.hud-label{font-size:.55rem;letter-spacing:2px;text-transform:uppercase;color:#888;font-weight:700}
+.hud-val{font-family:'Bebas Neue',cursive;font-size:1.2rem;color:var(--gold)}
+#hp-bar{flex:1;max-width:200px}
+#hp-track{width:100%;height:8px;background:#2a1a40;border-radius:4px;overflow:hidden;margin-top:3px}
+#hp-fill{height:100%;background:var(--green);border-radius:4px;transition:width .3s}
+#energy-bar-container{display:flex;flex-direction:column;align-items:center;gap:1px;flex:1;max-width:160px}
+#energy-track{width:100%;height:8px;background:#2a1a40;border-radius:4px;overflow:hidden;margin-top:3px}
+#energy-fill{height:100%;background:#00bcd4;border-radius:4px;transition:width .6s}
+#wave-announce{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Bebas Neue',cursive;font-size:4rem;letter-spacing:6px;
+  color:var(--gold);text-shadow:0 0 40px rgba(240,192,64,0.5);
+  z-index:200;pointer-events:none;opacity:0;transition:opacity .3s;
+  text-align:center;
+}
+#stadium-name{
+  position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+  font-family:'Bebas Neue',cursive;font-size:2rem;letter-spacing:4px;
+  color:#b09fff;text-shadow:0 0 20px rgba(176,159,255,0.5);
+  z-index:199;pointer-events:none;opacity:0;transition:opacity .3s;
+  text-align:center;margin-top:80px;
+}
+#overlay{
+  position:fixed;inset:0;background:rgba(14,6,24,0.97);
+  z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.5rem;
+}
+#overlay h1{font-family:'Bebas Neue',cursive;font-size:3.5rem;letter-spacing:5px;color:var(--gold)}
+#overlay p{color:#b09fff;font-size:.95rem;max-width:480px;text-align:center;line-height:1.6}
+#overlay .btn{
+  background:var(--gold);color:#0e0618;
+  font-family:'Bebas Neue',cursive;font-size:1.5rem;letter-spacing:3px;
+  padding:12px 48px;border:none;border-radius:3px;cursor:pointer;
+}
+#overlay .btn:hover{background:#f7dc80}
+#overlay .btn-secondary{
+  background:rgba(255,255,255,0.08);
+  color:#fff;
+  border:1px solid rgba(240,192,64,0.18);
+}
+.lobby-box{
+  width:min(980px,calc(100% - 40px));
+  padding:2rem;
+  background:rgba(20,10,40,0.94);
+  border:1px solid rgba(240,192,64,0.18);
+  border-radius:24px;
+  box-shadow:0 30px 80px rgba(0,0,0,0.35);
+}
+.lobby-header{max-width:700px;text-align:center;margin-bottom:1.5rem;}
+.lobby-header h1{font-size:3rem;margin:0 0 0.6rem;line-height:1;}
+.lobby-header p{color:#d8c9ff;line-height:1.8;font-size:1rem;}
+.lobby-container{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;width:100%;margin-top:1.5rem;}
+.lobby-card{background:rgba(240,192,64,0.08);border:1px solid rgba(240,192,64,0.12);padding:18px 20px;border-radius:18px;cursor:pointer;transition:transform .2s,background .2s,border-color .2s;}
+.lobby-card:hover{transform:translateY(-3px);background:rgba(240,192,64,0.14);}
+.lobby-card.active{background:rgba(240,192,64,0.18);border-color:rgba(240,192,64,0.45);}
+.lobby-card h2{margin:0 0 .5rem;font-size:1.15rem;color:var(--gold);}
+.lobby-card p{margin:0;color:#d8c9ff;line-height:1.6;}
+.lobby-card span{display:block;margin-top:1rem;font-size:.95rem;color:#b8b2ff;}
+.lobby-desc{max-width:720px;text-align:center;color:#e6def8;margin-top:24px;font-size:1rem;line-height:1.8;}
+.lobby-actions{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:28px;}
+.lobby-footnote{margin-top:18px;color:#bbb;max-width:680px;text-align:center;font-size:.95rem;line-height:1.7;}
+#coach-panel{
+  position:fixed;right:16px;top:70px;z-index:50;
+  display:flex;flex-direction:column;gap:8px;
+}
+.coach-btn{
+  background:rgba(30,15,50,0.95);border:1px solid rgba(240,192,64,0.25);
+  border-radius:4px;padding:8px 12px;cursor:pointer;text-align:center;
+  transition:border-color .2s,transform .1s;min-width:110px;
+}
+.coach-btn:hover:not(.disabled){border-color:var(--gold);transform:scale(1.04)}
+.coach-btn.disabled{opacity:.4;cursor:not-allowed}
+.coach-btn.active{border-color:var(--gold);background:rgba(240,192,64,0.1)}
+.coach-name{font-family:'Bebas Neue',cursive;font-size:.95rem;letter-spacing:2px;color:var(--gold)}
+.coach-desc{font-size:.62rem;color:#888;letter-spacing:.5px;margin-top:2px}
+.coach-timer{font-family:'Bebas Neue',cursive;font-size:.85rem;color:#b09fff;margin-top:3px}
+#reposition-msg{
+  position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+  background:rgba(240,192,64,0.15);border:1px solid rgba(240,192,64,0.4);
+  font-family:'Bebas Neue',cursive;font-size:1.1rem;letter-spacing:2px;color:var(--gold);
+  padding:8px 24px;border-radius:3px;z-index:60;display:none;
+}
+canvas{display:block;position:fixed;top:60px;left:0}
+</style>
+</head>
+<body>
+
+<div id="ui">
+  <div id="title">FVZ</div>
+  <div id="hud">
+    <div class="hud-item">
+      <span class="hud-label">Nivel</span>
+      <span class="hud-val" id="hud-wave">1/5</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">Oleada</span>
+      <span class="hud-val" id="hud-subwave">1/3</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">Zombies</span>
+      <span class="hud-val" id="hud-enemies">0</span>
+    </div>
+    <div class="hud-item" id="hp-bar">
+      <span class="hud-label">Base</span>
+      <div id="hp-track"><div id="hp-fill" style="width:100%"></div></div>
+    </div>
+    <div id="energy-bar-container">
+      <span class="hud-label" style="color:#00bcd4">⚡ Soles</span>
+      <div id="energy-track"><div id="energy-fill" style="width:50%"></div></div>
+      <span class="hud-val" id="hud-energy">60</span>
+    </div>
+    <div class="hud-item">
+      <span class="hud-label">Score</span>
+      <span class="hud-val" id="hud-score">0</span>
+    </div>
+  </div>
+</div>
+
+<div id="coach-panel">
+  <div class="coach-btn" id="btn-pep" onclick="activateCoach('pep')">
+    <div class="coach-name">Guardiola</div>
+    <div class="coach-desc">Reorganiza 7s<br>(req. Iniesta)</div>
+    <div class="coach-timer" id="timer-pep"></div>
+  </div>
+  <div class="coach-btn" id="btn-lui" onclick="activateCoach('lui')">
+    <div class="coach-name">Luis Enrique</div>
+    <div class="coach-desc">Turbo x2 — 10s</div>
+    <div class="coach-timer" id="timer-lui"></div>
+  </div>
+  <div class="coach-btn" id="btn-sca" onclick="activateCoach('sca')">
+    <div class="coach-name">Scaloni</div>
+    <div class="coach-desc">Muro x3 — 15s</div>
+    <div class="coach-timer" id="timer-sca"></div>
+  </div>
+</div>
+
+<div id="reposition-msg">MODO GUARDIOLA — Mueve tus jugadores (7s)</div>
+
+<div id="wave-announce"></div>
+<div id="stadium-name"></div>
+
+<div id="overlay">
+  <div class="lobby-box">
+    <div class="lobby-header">
+      <h1>Lobby táctico</h1>
+      <p>Elige tu modalidad de juego antes de entrar al campo. Ajusta energía, defensa y velocidad para dominar la partida desde el comienzo.</p>
+    </div>
+    <div class="lobby-container">
+      <div class="lobby-card active" id="mode-equilibrada" onclick="selectTactic('equilibrada')">
+        <h2>Equilibrada</h2>
+        <p>Buen balance entre recursos y defensa para adaptarte a cada oleada.</p>
+        <span>60 energía inicial</span>
+      </div>
+      <div class="lobby-card" id="mode-ofensiva" onclick="selectTactic('ofensiva')">
+        <h2>Ofensiva</h2>
+        <p>Más energía inicial para colocar jugadores rápidamente y atacar antes.</p>
+        <span>75 energía inicial</span>
+      </div>
+      <div class="lobby-card" id="mode-defensiva" onclick="selectTactic('defensiva')">
+        <h2>Defensiva</h2>
+        <p>Empieza con un ritmo más estable y prepara la mejor defensa posible.</p>
+        <span>55 energía inicial</span>
+      </div>
+    </div>
+    <div class="lobby-desc">
+      <p id="lobby-description">La modalidad Equilibrada te da una base sólida para aprender cómo funciona el tablero, la energía y los coaches.</p>
+    </div>
+    <div class="lobby-actions">
+      <button class="btn" onclick="startGame()">Empezar partida</button>
+      <button class="btn btn-secondary" id="continue-btn" style="display:none;" onclick="continueProgress()">Continuar partida</button>
+      <a class="btn btn-secondary" href="index.html">Volver al menú</a>
+    </div>
+    <div class="lobby-footnote">
+      <p>Tablero 5 filas x 9 columnas • Coloca jugadores con energía y usa coaches especiales para cambiar el rumbo del partido.</p>
+    </div>
+  </div>
+</div>
+<canvas id="c"></canvas>
+
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = () => window.innerWidth;
+const H = () => window.innerHeight - 60;
+const API_BASE = 'http://localhost:8080/api';
+const USER_ID = 'player-default';
+let savedProgress = null;
+
+function resize(){
+  canvas.width = W();
+  canvas.height = H();
+}
+
+function saveProgress(){
+  if (!API_BASE) return;
+  const payload = {
+    userId: USER_ID,
+    level,
+    subWave,
+    score,
+    energy
+  };
+  fetch(`${API_BASE}/progress`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  })
+    .then(response => response.json())
+    .then(data => {
+      savedProgress = payload;
+      console.log('Progreso guardado:', data);
+      const btn = document.getElementById('continue-btn');
+      if (btn) btn.style.display = 'inline-flex';
+    })
+    .catch(error => console.warn('No se pudo guardar el progreso:', error));
+}
+
+function loadProgress(){
+  if (!API_BASE) return;
+  fetch(`${API_BASE}/progress?userId=${encodeURIComponent(USER_ID)}`)
+    .then(response => {
+      if (!response.ok) throw new Error('No saved progress');
+      return response.json();
+    })
+    .then(data => {
+      savedProgress = data;
+      const btn = document.getElementById('continue-btn');
+      if (btn) btn.style.display = 'inline-flex';
+      const descEl = document.getElementById('lobby-description');
+      if (descEl) {
+        descEl.textContent = `Progreso disponible: nivel ${data.level} - oleada ${data.subWave}. Presiona Continuar.`;
+      }
+    })
+    .catch(() => {
+      const btn = document.getElementById('continue-btn');
+      if (btn) btn.style.display = 'none';
+    });
+}
+
+function continueProgress(){
+  if (!savedProgress) return;
+  level = savedProgress.level || 1;
+  subWave = savedProgress.subWave || 1;
+  score = savedProgress.score || 0;
+  energy = savedProgress.energy || 60;
+  baseHP = 100;
+  players = [];
+  enemies = [];
+  projectiles = [];
+  particles = [];
+  energyDrops = [];
+  waveCleared = false;
+  bossSpawned = false;
+  spawnCount = 0;
+  spawnTimer = 0;
+  nextSpawnAt = 900 + Math.floor(Math.random()*300);
+  document.getElementById('hud-wave').textContent = level+'/'+totalLevels;
+  document.getElementById('hud-subwave').textContent = subWave+'/'+totalSubWaves;
+  document.getElementById('hud-score').textContent = score;
+  document.getElementById('hud-energy').textContent = energy;
+  document.getElementById('hp-fill').style.width = '100%';
+  document.getElementById('energy-fill').style.width = (energy/maxEnergy*100) + '%';
+  document.getElementById('overlay').style.display = 'none';
+  state = 'playing';
+  getLanes();
+  updateCoachBtns();
+  showWaveAnnounce(`CONTINUANDO NIVEL ${level}`);
+  const stadium = STADIUMS[level-1] || STADIUMS[0];
+  showStadiumName(stadium.name);
+}
+
+resize();
+window.addEventListener('resize', resize);
+
+// ── STADIUMS ──
+const STADIUMS = [
+  { name: 'Camp Nou', color: '#1a4fa0', accent: '#a8120a', grass: '#1e4d1e' },
+  { name: 'Santiago Bernabéu', color: '#6b2d8b', accent: '#f0c040', grass: '#1a4a1a' },
+  { name: 'Wembley', color: '#1a3a6b', accent: '#ffffff', grass: '#174017' },
+  { name: 'Río de Janeiro', color: '#007749', accent: '#ffd700', grass: '#155a15' },
+  { name: 'Santiago Bernabéu', color: '#6b2d8b', accent: '#f0c040', grass: '#1a4a1a' }, // Final!
+];
+
+// ── GAME STATE ──
+let state = 'overlay';
+let score = 0;
+let baseHP = 100;
+let level = 1;         // 1-5 (stadiums)
+let totalLevels = 5;
+let subWave = 1;       // oleadas dentro del nivel
+let totalSubWaves = 3;
+let spawnTimer = 0;
+let spawnInterval = 0; // will be randomized 1200-1800 frames (20-30s at 60fps)
+let nextSpawnAt = 0;
+let spawnCount = 0;
+let waveCleared = false;
+let messiUsed = false;
+let messiActive = false;
+let messiTimer = 0;
+let guardiolaTimer = 0;
+let luisTimer = 0;
+let scaloniTimer = 0;
+let repositionMode = false;
+let dragPlayer = null;
+let coachCooldowns = {pep:0,lui:0,sca:0};
+let coachUsed = {pep:false,lui:false,sca:false};
+let bossSpawned = false;
+let frameCount = 0;
+
+const TACTIC_MODES = {
+  equilibrada: {
+    label:'Equilibrada',
+    desc:'Modo equilibrado: buen balance entre energía y defensa para adaptarte a cualquier oleada.',
+    energy:60
+  },
+  ofensiva: {
+    label:'Ofensiva',
+    desc:'Modo ofensivo: más energía inicial para colocar jugadores con rapidez y controlar el ataque.',
+    energy:75
+  },
+  defensiva: {
+    label:'Defensiva',
+    desc:'Modo defensivo: comienza con menos energía y prepara la mejor defensa posible.',
+    energy:55
+  }
+};
+let selectedTactic = 'equilibrada';
+
+function selectTactic(mode){
+  if(!TACTIC_MODES[mode]) return;
+  selectedTactic = mode;
+  document.querySelectorAll('.lobby-card').forEach(card => {
+    card.classList.toggle('active', card.id === `mode-${mode}`);
+  });
+  updateLobbyInfo();
+}
+
+function updateLobbyInfo(){
+  const info = TACTIC_MODES[selectedTactic];
+  const descEl = document.getElementById('lobby-description');
+  if(descEl) descEl.textContent = info.desc;
+}
+
+// ── ENERGY SYSTEM ──
+let energy = 60;
+let maxEnergy = 150;
+let energyDrops = [];
+
+const PLAYER_COSTS = {
+  neymar: 70,
+  suarez: 100,
+  iniesta: 120,
+  mascherano: 50,
+  fabregas: 50
+};
+
+const LANES = 5;
+let laneH, laneY;
+
+function getLanes(){
+  laneH = H() / LANES;
+  laneY = i => i * laneH + laneH/2;
+}
+
+// ── PLAYER DEFINITIONS ──
+// Suarez = lanzaguisantes base (100 dmg, cadencia lenta)
+// Neymar  = 40% del daño de Suarez, cadencia un poco más rápida pero más suave
+// Iniesta = solo redirige proyectiles que ya existen, baja dmg -35%
+// Mascherano = Nuez: pura pared, NO dispara, mucha vida
+// Fabregas = Girasol: genera energía, NO dispara
+const PLAYER_DEFS = {
+  neymar: {
+    name:'Neymar', initials:'NEY', color:'#1a9e3f', borderColor:'#2ecc71',
+    skinColor:'#c8854a', shirtColor:'#f9e526', shirtStripe:'#1a9e3f',
+    fireRate: 84,   // 1.4 segundos a 60fps
+    damage: 50,
+    hp: 70, maxHP: 70,
+    shootFn: 'neymarShoot', role:'Disparo Suave', cost: 70
+  },
+  suarez: {
+    name:'Suárez', initials:'SUA', color:'#1565c0', borderColor:'#5b8dee',
+    skinColor:'#d4956a', shirtColor:'#1565c0', shirtStripe:'#0d47a1',
+    fireRate: 150,  // 2.5 segundos a 60fps
+    damage: 70,
+    hp: 95, maxHP: 95,
+    shootFn: 'suarezShoot', role:'Disparo Pesado', cost: 100
+  },
+  iniesta: {
+    name:'Iniesta', initials:'INI', color:'#8e24aa', borderColor:'#ce93d8',
+    skinColor:'#c5906a', shirtColor:'#6a1b9a', shirtStripe:'#4a148c',
+    fireRate: 99999999, damage: 0, hp: 90, maxHP: 90,
+    shootFn: 'iniestashoot', role:'Redirige −35% dmg', cost: 120 // Iniesta porcentaje de daño o corregido
+  },
+  mascherano: {
+    name:'Mascherano', initials:'MAS', color:'#37474f', borderColor:'#90a4ae',
+    skinColor:'#b87a50', shirtColor:'#37474f', shirtStripe:'#263238',
+    fireRate: 9999999999, damage: 0, hp: 175, maxHP: 175, // macherano correcion vida
+    shootFn: 'mascheranoShoot', role:'🧱 Tanque Bloqueador', cost: 50
+  },
+  fabregas: {
+    name:'Fàbregas', initials:'FAB', color:'#e65100', borderColor:'#ff9800',
+    skinColor:'#d4956a', shirtColor:'#e65100', shirtStripe:'#bf360c',
+    fireRate: 9999999, damage: 0, hp: 60, maxHP: 60,
+    shootFn: 'fabregasShoot', role:'🌻 Genera Energía ⚡', cost: 50,
+    isGenerator: true
+  }
+};
+
+// ── ARRAYS ──
+let players = [];
+let enemies = [];
+let projectiles = [];
+let particles = [];
+let playerTimers = {};
+
+// ── GRID SYSTEM ── 8 slots per lane
+const GRID_START_X = 80;
+const GRID_SLOT_WIDTH = 70;  // width of each grid cell
+const NUM_SLOTS = 9;
+
+// Get X position from slot number
+function getSlotX(slotNum){
+  return GRID_START_X + slotNum * GRID_SLOT_WIDTH;
+}
+
+// Get slot number from X position
+function getSlotFromX(x){
+  const slot = Math.round((x - GRID_START_X) / GRID_SLOT_WIDTH);
+  return Math.max(0, Math.min(NUM_SLOTS - 1, slot));
+}
+
+// Get all occupied slots in a lane
+function getOccupiedSlots(lane){
+  return players.filter(p=>p.lane===lane).map(p=>p.slot);
+}
+
+// ── PLACED PLAYER ──
+class Player {
+  constructor(type, lane, slot){
+    const d = PLAYER_DEFS[type];
+    Object.assign(this, JSON.parse(JSON.stringify(d)));
+    this.type = type;
+    this.lane = lane;
+    this.slot = slot;  // grid slot number (0-7)
+    this.x = getSlotX(slot);
+    this.y = laneY(lane);
+    this.fireTimer = 0;
+    this.boosted = false;
+    this.shieldLanes = 0;
+    this.wobble = 0;
+    // For Fabregas energy gen
+    this.genTimer = 0;
+    this.genDelay = this.type === 'fabregas' ? 420 : 0; // first cast 7s
+    this.genRate = 900;
+    this.pulse = 0;
+  }
+
+  update(){
+    this.fireTimer++;
+    let rate = this.fireRate;
+    if(this.boosted && (this.type==='neymar'||this.type==='suarez')) rate = Math.floor(rate/2);
+
+    // Fabregas generates energy passively — does NOT shoot
+    if(this.type === 'fabregas'){
+      this.genTimer++;
+      this.pulse = (this.pulse + 0.05) % (Math.PI*2);
+      if(this.genTimer >= this.genDelay){
+        this.genTimer = 0;
+        this.genDelay = 900 + Math.floor(Math.random()*300); // after first cast, 15-20s
+        energy = Math.min(maxEnergy, energy + 25);
+        spawnParticles(this.x, this.y, '#ff9800', 8);
+        showMsg('⚡ +25 Energía de Fàbregas!');
+      }
+      if(this.wobble>0) this.wobble -= 1.5;
+      return;
+    }
+
+    // Mascherano = Tanque bloqueador: no dispara, solo bloquea
+    if(this.type === 'mascherano'){
+      // Mascherano no hace nada excepto estar ahí para bloquear
+      if(this.wobble>0) this.wobble -= 1.5;
+      return;
+    }
+
+    // Iniesta = solo redirige proyectiles enemigos que pasen cerca
+    // Intercepta EnemyProjectiles en su lane y los convierte en Projectiles aliados
+    // con -50% del daño original del disparo
+    if(this.type === 'iniesta'){
+      // scan friendly projectiles near Iniesta's position and redirect them to the nearest enemy
+      for(let i = projectiles.length - 1; i >= 0; i--){
+        const proj = projectiles[i];
+        if(!proj._isEnemy && !proj._redirected && proj.targetLane === this.lane
+           && Math.abs(proj.x - this.x) < 40){
+          const nearest = enemies.filter(e=>!e.dead).sort((a,b)=>a.x-b.x)[0];
+          if(nearest){
+            proj._redirected = true;
+            proj.dmg = Math.max(1, proj.dmg * 0.5);
+            proj.homing = true;
+            proj.target = nearest;
+            proj.targetLane = nearest.lane;
+            proj.destY = laneY(nearest.lane);
+            proj.color = '#ce93d8';
+            proj.style = 'ball';
+            proj.speed = 6;
+            this.wobble = 8;
+            spawnParticles(this.x, this.y, '#ce93d8', 5);
+          }
+        }
+      }
+      if(this.wobble>0) this.wobble -= 1.5;
+      return;
+    }
+
+    // Neymar and Suarez — shoot at enemies in their lane
+    const target = enemies.find(e=>!e.dead && e.lane===this.lane);
+
+    if(target && this.fireTimer >= rate){
+      this.fireTimer = 0;
+      this.wobble = 8;
+      if(this.type === 'neymar') this.neymarShoot(target);
+      else if(this.type === 'suarez') this.suarezShoot(target);
+    }
+    if(this.wobble>0) this.wobble -= 1.5;
+  }
+
+  neymarShoot(target){
+    // Solo dispara hacia adelante en su línea (dmg = this.damage = 40)
+    projectiles.push(new Projectile(this.x+30, this.y, 1, this.damage, this.lane, 'ball', '#f9e526', false));
+  }
+
+  suarezShoot(target){
+    // Heavy cannonball — slow fire rate but 100 damage
+    projectiles.push(new Projectile(this.x+30, this.y, 1, this.damage, this.lane, 'ball-heavy', '#e03030', false));
+  }
+
+  iniestashoot(target){ /* handled in update() via projectile interception */ }
+  mascheranoShoot(target){ /* Nuez — no dispara */ }
+  fabregasShoot(target){ /* Girasol — no dispara */ }
+
+  draw(){
+    const cx = this.x;
+    const cy = this.y + Math.sin(this.wobble)*2;
+    getLanes();
+
+    // Fabregas energy aura
+    if(this.type === 'fabregas'){
+      const auraR = 35 + Math.sin(this.pulse)*8;
+      ctx.save();
+      ctx.globalAlpha = 0.15 + Math.sin(this.pulse)*0.1;
+      ctx.fillStyle = '#ff9800';
+      ctx.beginPath();
+      ctx.arc(cx, cy, auraR, 0, Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+
+      // Energy progress ring
+      const genPct = this.genDelay ? this.genTimer / this.genDelay : 0;
+      ctx.save();
+      ctx.strokeStyle = '#ff9800';
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 38, -Math.PI/2, -Math.PI/2 + genPct * Math.PI*2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    drawCartoonPlayer(ctx, cx, cy, this, false, this.shieldLanes);
+    // HP bar
+    const bw = 44, bh = 5;
+    const bx = cx - bw/2;
+    const by = cy + 38;
+    ctx.fillStyle = '#2a1a40';
+    ctx.fillRect(bx, by, bw, bh);
+    const ratio = this.hp/this.maxHP;
+    ctx.fillStyle = ratio>0.5?'#2ecc71':ratio>0.25?'#f0c040':'#e03030';
+    ctx.fillRect(bx, by, bw*ratio, bh);
+  }
+}
+
+// ── ENEMY DEFS ──
+// PvZ reference values (60fps):
+//   Zombie normal : speed ~0.35,  hp ~100
+//   Zombie cono   : speed ~0.40,  hp ~280  (coneHead)
+//   Zombie deportista: speed ~1.6, hp ~1000 (athlete in full sprint)
+//   Saltador pertica: speed ~1.8, jumps over 1 player, hp ~240
+//
+// Benzema = cono:  un pelín más rápido que normal, misma vida que cono
+// Pepe    = resistencia zombie deportista SOLO — velocidad zombie normal
+// Bale    = velocidad zombie deportista, vida zombie normal
+// Modric  = saltador de pértiga exacto (salta sobre un jugador, esquiva)
+// Cristiano = BOSS
+const ENEMY_DEFS = {
+  benzema:{name:'Benzema',initials:'BEN',skinColor:'#c8905a',shirtColor:'#e8e8e8',shirtStripe:'#c0c0c0',
+    speed:0.55,   // más lento, estrategia
+    hp:1200,maxHP:1200,  // 12 disparos de Suárez
+    damage:8,attackRange:350,meleeRange:60,role:'Tirador',color:'#e03030',stunAmount:12},
+  pepe:{name:'Pepe',initials:'PEP',skinColor:'#b07040',shirtColor:'#c0c0c0',shirtStripe:'#909090',
+    speed:0.32,   // más lento, estrategia
+    hp:2500,maxHP:2500, // máxima resistencia
+    damage:7,attackRange:60,meleeRange:55,role:'Tanque',color:'#888',stunAmount:9},
+  bale:{name:'Bale',initials:'BAL',skinColor:'#c0885a',shirtColor:'#2ecc71',shirtStripe:'#27ae60',
+    speed:0.62,    // más lento, estrategia
+    hp:800,maxHP:800, // vida más baja pero rápido
+    damage:12,attackRange:60,meleeRange:55,role:'Sprinter',color:'#2ecc71',stunAmount:15},
+  modric:{name:'Modric',initials:'MOD',skinColor:'#d4956a',shirtColor:'#ffffff',shirtStripe:'#cccccc',
+    speed:0.45,   // más lento, estrategia
+    hp:1000,maxHP:1000,  // 10 disparos de Suárez
+    damage:10,attackRange:60,meleeRange:55,role:'Salta jugadores',color:'#5b8dee',
+    isVaulter:true, vaultCooldown:0, vaultJumpY:0, vaultJumping:false,stunAmount:12},
+  cristiano:{name:'Cristiano',initials:'CR7',skinColor:'#c09060',shirtColor:'#e03030',shirtStripe:'#b02020',
+    speed:0.75,hp:5000,maxHP:5000,damage:250,attackRange:60,meleeRange:60,role:'BOSS',color:'#f0c040',isBoss:true,stunAmount:20}
+};
+
+class Enemy {
+  constructor(type, lane){
+    const d = ENEMY_DEFS[type];
+    Object.assign(this, JSON.parse(JSON.stringify(d)));
+    this.type = type;
+    this.lane = lane;
+    this.x = W() + 60;
+    this.y = laneY(lane);
+    this.dead = false;
+    this.attackTimer = 0;
+    this.swingAngle = 0;
+    this.swinging = false;
+    this.swingDir = 1;
+    this.stunned = 0;
+    // Modric vaulter
+    this.isVaulter = d.isVaulter || false;
+    this.vaultCooldown = 0;
+    this.vaultJumping = false;
+    this.vaultJumpY = 0;   // arc height offset
+    this.vaultJumpPhase = 0;
+    this.vaultTarget = null;
+  }
+
+  update(){
+    if(this.dead||this.stunned>0){this.stunned--;return;}
+    this.attackTimer++;
+
+    // ── MODRIC: Pértiga ──
+    // Cuando se acerca a un jugador, salta por encima (inmune a proyectiles durante el salto)
+    // y aterriza al otro lado
+    if(this.isVaulter){
+      if(this.vaultCooldown > 0) this.vaultCooldown--;
+
+      if(!this.vaultJumping && this.vaultCooldown <= 0){
+        const blocker = players.find(p => p.lane === this.lane && p.x < this.x && this.x - p.x < 90);
+        if(blocker){
+          // inicia salto
+          this.vaultJumping = true;
+          this.vaultJumpPhase = 0;
+          this.vaultTarget = blocker;
+          spawnParticles(this.x, this.y, '#5b8dee', 5);
+        }
+      }
+
+      if(this.vaultJumping){
+        this.vaultJumpPhase += 0.1;
+        // parabola sobre el jugador
+        this.vaultJumpY = -Math.sin(this.vaultJumpPhase) * 70;
+        this.x -= this.speed * 1.5; // más rápido durante el salto
+        if(this.vaultJumpPhase >= Math.PI){
+          // aterrizó al otro lado
+          this.vaultJumping = false;
+          this.vaultJumpY = 0;
+          this.vaultCooldown = 180; // 3s antes de poder saltar de nuevo
+          spawnParticles(this.x, this.y, '#5b8dee', 8);
+        }
+      } else {
+        this.x -= this.speed;
+        // melee normal cuando no salta
+        const closePlayer = players
+          .filter(p=>p.lane===this.lane && Math.abs(p.x-this.x)<this.meleeRange+20)
+          .sort((a,b)=>b.x-a.x)[0];
+        if(closePlayer){
+          this.x = Math.max(this.x, closePlayer.x + 55);
+          if(this.attackTimer>60){
+            this.attackTimer=0;
+            this.swinging=true;
+            this.swingAngle=0;
+            closePlayer.hp -= this.damage;
+            spawnParticles(closePlayer.x, closePlayer.y, '#e03030', 5);
+            if(closePlayer.hp<=0) removePlayer(closePlayer);
+          }
+        }
+      }
+    } else {
+      // ── Normal movement ──
+      // Check for any player blocker in front — no enemy may pass through allies
+      const frontPlayer = players.filter(p=>p.lane===this.lane && p.x < this.x)
+        .sort((a,b)=>b.x-a.x)[0];
+      if(frontPlayer && this.x - frontPlayer.x < 100){
+        this.x = frontPlayer.x + 85;
+        if(this.attackTimer>60){
+          this.attackTimer=0;
+          this.swinging=true;
+          this.swingAngle=0;
+          frontPlayer.hp -= this.damage;
+          spawnParticles(frontPlayer.x, frontPlayer.y, '#e03030', 5);
+          if(frontPlayer.hp<=0) removePlayer(frontPlayer);
+        }
+      } else {
+        this.x -= this.speed;
+
+        if(this.type==='benzema'){
+          // target frontmost (rightmost) player in same lane within range
+          const targets = players.filter(p=>p.lane===this.lane && p.x < this.x && this.x - p.x < this.attackRange)
+            .sort((a,b)=>b.x-a.x);
+          if(targets.length && this.attackTimer>70){
+            this.attackTimer=0;
+            this.swinging=true;
+            this.swingAngle=0;
+            const proj = new EnemyProjectile(this.x-30, this.y, this.damage, this.lane);
+            projectiles.push(proj);
+          }
+        }
+
+        // Frontmost player in lane that's close enough for melee
+        const closePlayer = players
+          .filter(p=>p.lane===this.lane && Math.abs(p.x-this.x)<this.meleeRange+20)
+          .sort((a,b)=>b.x-a.x)[0];
+        if(closePlayer && this.type!=='benzema'){
+          this.x = Math.max(this.x, closePlayer.x + 55);
+          if(this.attackTimer>60){
+            this.attackTimer=0;
+            this.swinging=true;
+            this.swingAngle=0;
+            closePlayer.hp -= this.damage;
+            spawnParticles(closePlayer.x, closePlayer.y, '#e03030', 5);
+            if(closePlayer.hp<=0) removePlayer(closePlayer);
+          }
+        }
+      }
+    }
+
+    if(this.swinging){
+      this.swingAngle += 15*this.swingDir;
+      if(Math.abs(this.swingAngle)>60) this.swingDir*=-1;
+      if(this.swingAngle<-30&&this.swingDir==1){this.swinging=false;this.swingAngle=0;this.swingDir=1;}
+    }
+
+    if(this.x < 40){
+      baseHP -= 0.5;
+      if(baseHP<=0) gameOver();
+    }
+
+    if(this.type==='cristiano' && this.x < 50 && !this._siuuu){
+      this._siuuu=true;
+      showSIUUU();
+    }
+  }
+
+  takeDamage(dmg){
+    if(this.dead) return;
+    // Modric es inmune mientras está saltando
+    if(this.type==='modric' && this.vaultJumping){
+      spawnParticles(this.x, this.y, '#5b8dee', 3);
+      return;
+    }
+    // Aplicar stun al recibir daño (se frenan)
+    this.stunned += (this.stunAmount || 12);
+    
+    this.hp -= dmg;
+    spawnParticles(this.x, this.y, '#ffdd57', 4);
+    if(this.hp<=0){
+      this.dead=true;
+      score += this.isBoss ? 500 : 50;
+      spawnParticles(this.x, this.y, this.color, 12);
+      document.getElementById('hud-score').textContent=score;
+    }
+  }
+
+  draw(){
+    if(this.dead) return;
+    const drawY = this.y + (this.vaultJumpY||0);
+    drawCartoonEnemy(ctx, this.x, drawY, this, this.swingAngle);
+    // HP bar
+    const bw=44,bh=5;
+    ctx.fillStyle='#2a1a40';
+    ctx.fillRect(this.x-bw/2, drawY+38, bw, bh);
+    ctx.fillStyle=this.hp/this.maxHP>0.5?'#e03030':this.hp/this.maxHP>0.25?'#f0c040':'#888';
+    ctx.fillRect(this.x-bw/2, drawY+38, bw*(this.hp/this.maxHP), bh);
+    // Modric vault indicator
+    if(this.isVaulter && this.vaultJumping){
+      ctx.save();
+      ctx.strokeStyle='#5b8dee';
+      ctx.lineWidth=2;
+      ctx.setLineDash([4,3]);
+      ctx.beginPath();
+      ctx.arc(this.x, drawY, 28, 0, Math.PI*2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+  }
+}
+
+// ── PROJECTILE ──
+class Projectile {
+  constructor(x,y,dir,dmg,targetLane,style,color,homing,target){
+    this.x=x; this.y=y; this.dir=dir; this.dmg=dmg;
+    this.targetLane=targetLane; this.style=style; this.color=color;
+    this.homing=homing; this.target=target;
+    this.speed=6; this.dead=false; this.rot=0;
+    this.destY = laneY(targetLane);
+    this._isEnemy = false;   // friendly by default
+    this._redirected = false;
+  }
+  update(){
+    this.rot += 8;
+    if(this.homing && this.target && !this.target.dead){
+      const dx=this.target.x-this.x, dy=this.target.y-this.y;
+      const d=Math.sqrt(dx*dx+dy*dy);
+      this.x+=dx/d*this.speed; this.y+=dy/d*this.speed;
+      // update targetLane dynamically for homing
+      this.targetLane = this.target.lane;
+    } else {
+      this.x += this.speed * this.dir;
+      this.y += (this.destY - this.y)*0.12;
+    }
+    if(this.x>W()+50||this.x<-50) this.dead=true;
+
+    if(!this._isEnemy){
+      // friendly projectile — hits enemies
+      const hit=enemies.find(e=>!e.dead && e.lane===this.targetLane && Math.abs(e.x-this.x)<24 && Math.abs(e.y-this.y)<30);
+      if(hit){ hit.takeDamage(this.dmg); this.dead=true; }
+    } else {
+      // enemy projectile — hits players (also interceptable by Iniesta)
+      const hit=players.find(p=>p.lane===this.lane && Math.abs(p.x-this.x)<26);
+      if(hit){
+        hit.hp-=this.dmg;
+        spawnParticles(hit.x,hit.y,'#e03030',4);
+        this.dead=true;
+        if(hit.hp<=0) removePlayer(hit);
+      }
+    }
+  }
+  draw(){
+    ctx.save();
+    ctx.translate(this.x,this.y);
+    ctx.rotate(this.rot*Math.PI/180);
+    if(this.style==='ball-heavy'){
+      ctx.beginPath();
+      ctx.arc(0,0,10,0,Math.PI*2);
+      ctx.fillStyle=this.color;
+      ctx.fill();
+      ctx.strokeStyle='#fff2';
+      ctx.lineWidth=2;
+      ctx.stroke();
+      ctx.strokeStyle='rgba(0,0,0,0.3)';
+      ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(-8,0);ctx.lineTo(8,0);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(0,-8);ctx.lineTo(0,8);ctx.stroke();
+    } else {
+      drawBall(ctx, 0, 0, this.style==='ball-small'?6:8, this.color);
+    }
+    ctx.restore();
+  }
+}
+
+class EnemyProjectile {
+  constructor(x,y,dmg,lane){
+    this.x=x;this.y=y;this.dmg=dmg;this.lane=lane;
+    this.speed=4;this.dead=false;this.rot=0;
+    this.destY=laneY(lane);
+    this.dir=-1;
+    this._isEnemy=true;   // Iniesta can intercept
+    this._redirected=false;
+    this.targetLane=lane;
+    this.homing=false;
+    this.style='ball';
+    this.color='#e03030';
+  }
+  update(){
+    this.rot+=8;
+    this.x -= this.speed;
+    if(this.x<-20) this.dead=true;
+    const hit=players.find(p=>p.lane===this.lane&&Math.abs(p.x-this.x)<26);
+    if(hit){
+      hit.hp-=this.dmg;
+      spawnParticles(hit.x,hit.y,'#e03030',4);
+      this.dead=true;   
+      if(hit.hp<=0) removePlayer(hit);
+    }
+  }
+  draw(){
+    ctx.save();
+    ctx.translate(this.x,this.y);
+    ctx.rotate(this.rot*Math.PI/180);
+    drawGuayo(ctx,0,0,this.dir<0?180:0,'#e03030');
+    ctx.restore();
+  }
+}
+
+// ── ENERGY DROP ──
+class EnergyDrop {
+  constructor(){
+    this.x = 80 + Math.random() * (W() - 200);
+    this.y = -20;
+    this.vy = 0.8 + Math.random()*0.4;
+    this.value = 10 + Math.floor(Math.random()*15);
+    this.r = 18;
+    this.dead = false;
+    this.pulse = Math.random() * Math.PI * 2;
+  }
+  update(){
+    this.pulse += 0.08;
+    this.y += this.vy;
+    if(this.y > H() + 30) this.dead = true;
+    // click or auto-collect if very low
+    // (clicks handled via canvas click)
+  }
+  draw(){
+    if(this.dead) return;
+    const glow = 0.5 + Math.sin(this.pulse)*0.3;
+    ctx.save();
+    ctx.globalAlpha = 0.9;
+    // glow
+    ctx.shadowColor = '#00e5ff';
+    ctx.shadowBlur = 12;
+    // drop shape
+    ctx.fillStyle = '#00bcd4';
+    ctx.beginPath();
+    ctx.arc(this.x, this.y, this.r + Math.sin(this.pulse)*2, 0, Math.PI*2);
+    ctx.fill();
+    // inner lighter
+    ctx.fillStyle = '#80deea';
+    ctx.beginPath();
+    ctx.arc(this.x - 4, this.y - 4, 5, 0, Math.PI*2);
+    ctx.fill();
+    // bolt symbol
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 13px Inter';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚡', this.x, this.y);
+    ctx.globalAlpha = 1;
+    ctx.shadowBlur = 0;
+    ctx.restore();
+  }
+}
+
+// ── PARTICLES ──
+class Particle {
+  constructor(x,y,color){
+    this.x=x;this.y=y;this.color=color;
+    this.vx=(Math.random()-0.5)*5;
+    this.vy=(Math.random()-0.5)*5;
+    this.life=30+Math.random()*20;
+    this.maxLife=this.life;
+    this.r=3+Math.random()*4;
+  }
+  update(){this.life--;this.x+=this.vx;this.y+=this.vy;this.vy+=0.15;}
+  draw(){
+    ctx.globalAlpha=this.life/this.maxLife;
+    ctx.fillStyle=this.color;
+    ctx.beginPath();
+    ctx.arc(this.x,this.y,this.r,0,Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha=1;
+  }
+}
+
+function spawnParticles(x,y,color,n){
+  for(let i=0;i<n;i++) particles.push(new Particle(x,y,color));
+}
+
+// ── DRAWING HELPERS ──
+function drawBall(ctx,x,y,r,color){
+  ctx.beginPath();
+  ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle=color;
+  ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.25)';
+  ctx.beginPath();
+  ctx.arc(x-r*0.3,y-r*0.3,r*0.3,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,0.2)';
+  ctx.lineWidth=1;
+  ctx.beginPath();
+  ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.stroke();
+}
+
+function drawCartoonHead(ctx,cx,cy,skinColor,size=1){
+  const r=22*size;
+  ctx.fillStyle='rgba(0,0,0,0.18)';
+  ctx.beginPath();
+  ctx.ellipse(cx,cy+r+4,r*0.8,r*0.25,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle=skinColor;
+  ctx.beginPath();
+  ctx.arc(cx,cy,r,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.35)';
+  ctx.lineWidth=2*size;
+  ctx.stroke();
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.ellipse(cx-8*size,cy-3*size,5*size,5.5*size,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(cx+8*size,cy-3*size,5*size,5.5*size,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#1a0a2e';
+  ctx.beginPath();ctx.arc(cx-7*size,cy-3*size,3*size,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx+9*size,cy-3*size,3*size,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#fff';
+  ctx.beginPath();ctx.arc(cx-6*size,cy-5*size,1.5*size,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx+10*size,cy-5*size,1.5*size,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.6)';
+  ctx.lineWidth=2.5*size;ctx.lineCap='round';
+  ctx.beginPath();ctx.moveTo(cx-12*size,cy-10*size);ctx.lineTo(cx-4*size,cy-9*size);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx+4*size,cy-9*size);ctx.lineTo(cx+12*size,cy-10*size);ctx.stroke();
+  ctx.strokeStyle='rgba(0,0,0,0.5)';
+  ctx.lineWidth=2*size;
+  ctx.beginPath();ctx.arc(cx,cy+8*size,8*size,0.1*Math.PI,0.9*Math.PI);ctx.stroke();
+}
+
+function drawCleat(ctx, cx, cy, facing, shirtColor){
+  const dx = facing>0?1:-1;
+  ctx.fillStyle=shirtColor;
+  ctx.fillRect(cx-8,cy+20,16,16);
+  ctx.fillStyle='#1a1a1a';
+  ctx.beginPath();
+  ctx.ellipse(cx+dx*5,cy+36,10,6,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='#333';
+  ctx.beginPath();
+  ctx.ellipse(cx-dx*4,cy+36,9,5,0,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='#fff';
+  for(let s=-1;s<=1;s+=2){
+    ctx.beginPath();
+    ctx.arc(cx+dx*5+s*4,cy+40,2,0,Math.PI*2);
+    ctx.fill();
+  }
+}
+
+function drawGuayo(ctx,cx,cy,angle,color){
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.rotate(angle*Math.PI/180);
+  ctx.fillStyle='#1a1a1a';
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.lineTo(-8,-28);
+  ctx.lineTo(8,-28);
+  ctx.lineTo(10,0);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle='#2a2a2a';
+  ctx.beginPath();
+  ctx.ellipse(4,-28,9,7,0.2,0,Math.PI*2);
+  ctx.fill();
+  ctx.fillStyle='#fff';
+  for(let i=0;i<3;i++){
+    ctx.beginPath();
+    ctx.arc(-4+i*4,-32,2,0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.strokeStyle=color;
+  ctx.lineWidth=2;
+  ctx.beginPath();
+  ctx.moveTo(-5,-5);ctx.lineTo(-5,-22);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawCartoonPlayer(ctx,cx,cy,def,isEnemy=false,shieldLanes=0){
+  getLanes();
+  const facing = isEnemy ? -1 : 1;
+
+  ctx.save();
+  ctx.globalAlpha = 0.25;
+  ctx.fillStyle = '#2ecc71';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy+34, 34, 10, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  if(shieldLanes>0){
+    ctx.fillStyle='rgba(144,164,174,0.1)';
+    ctx.fillRect(cx-30, cy-laneH*shieldLanes-laneH/2, 60, laneH*(shieldLanes*2+1));
+    ctx.strokeStyle='rgba(144,164,174,0.4)';
+    ctx.lineWidth=2;
+    ctx.setLineDash([6,4]);
+    ctx.strokeRect(cx-30, cy-laneH*shieldLanes-laneH/2, 60, laneH*(shieldLanes*2+1));
+    ctx.setLineDash([]);
+  }
+
+  ctx.fillStyle=def.shirtColor;
+  ctx.beginPath();
+  ctx.roundRect(cx-12,cy+20,24,22,4);
+  ctx.fill();
+  ctx.fillStyle=def.shirtStripe||def.shirtColor;
+  ctx.fillRect(cx-4,cy+20,8,22);
+
+  drawCleat(ctx,cx,cy,facing,def.shirtColor);
+  drawCartoonHead(ctx,cx,cy-2,def.skinColor);
+
+  ctx.fillStyle='rgba(14,6,24,0.8)';
+  ctx.beginPath();
+  ctx.roundRect(cx-22,cy-48,44,16,3);
+  ctx.fill();
+  ctx.fillStyle=def.borderColor||def.color||'#f0c040';
+  ctx.font='bold 9px Inter';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(def.initials,cx,cy-40);
+}
+
+function drawCartoonEnemy(ctx,cx,cy,def,swingAngle){
+  ctx.save();
+  ctx.globalAlpha = 0.22;
+  ctx.fillStyle = '#662222';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy+34, 34, 10, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  ctx.fillStyle=def.shirtColor;
+  ctx.beginPath();
+  ctx.roundRect(cx-12,cy+20,24,22,4);
+  ctx.fill();
+  ctx.fillStyle=def.shirtStripe||def.shirtColor;
+  ctx.fillRect(cx-4,cy+20,8,22);
+
+  drawCleat(ctx,cx,cy,-1,def.shirtColor);
+
+  ctx.save();
+  ctx.translate(cx-18,cy+10);
+  drawGuayo(ctx,0,0,swingAngle-30,def.color);
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha=0.92;
+  drawCartoonHead(ctx,cx,cy-2,def.skinColor,1);
+  ctx.restore();
+
+  ctx.fillStyle='rgba(224,48,48,0.7)';
+  ctx.beginPath();ctx.arc(cx-7,cy-5,3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx+9,cy-5,3,0,Math.PI*2);ctx.fill();
+
+  if(def.isBoss){
+    ctx.fillStyle=def.color;
+    ctx.font='bold 16px Inter';
+    ctx.textAlign='center';
+    ctx.fillText('👑',cx,cy-50);
+    ctx.font='bold 10px Inter';
+    ctx.fillStyle=def.color;
+    ctx.fillText('CR7',cx,cy-60);
+  }
+
+  ctx.fillStyle='rgba(80,10,10,0.85)';
+  ctx.beginPath();
+  ctx.roundRect(cx-22,cy-48,44,16,3);
+  ctx.fill();
+  ctx.fillStyle='#ff7070';
+  ctx.font='bold 9px Inter';
+  ctx.textAlign='center';
+  ctx.textBaseline='middle';
+  ctx.fillText(def.initials,cx,cy-40);
+}
+
+// ── WAVE / LEVEL CONFIG ──
+// 5 levels, each level has 3 sub-waves
+const LEVEL_CONFIG = [
+  // Level 1 — Camp Nou (easy)
+  [
+    ['benzema','benzema'],
+    ['benzema','bale'],
+    ['benzema','pepe'],
+  ],
+  // Level 2 — Santiago Bernabéu
+  [
+    ['benzema','benzema','bale'],
+    ['benzema','bale','modric'],
+    ['benzema','pepe','benzema','bale'],
+  ],
+  // Level 3 — Wembley
+  [
+    ['benzema','benzema','bale','bale'],
+    ['benzema','modric','bale','pepe'],
+    ['benzema','bale','pepe','benzema','modric'],
+  ],
+  // Level 4 — Río de Janeiro
+  [
+    ['benzema','bale','modric','benzema','pepe'],
+    ['bale','modric','pepe','bale','benzema','modric'],
+    ['benzema','pepe','bale','modric','benzema','pepe','bale','modric'],
+  ],
+  // Level 5 — Bernabéu Final (boss)
+  [
+    ['benzema','bale','modric','benzema','pepe','bale'],
+    ['bale','modric','pepe','bale','modric','pepe','benzema','bale','modric'],
+    ['cristiano'], // Solo boss
+  ],
+];
+
+function getCurrentWave(){
+  if(!LEVEL_CONFIG[level-1]) return [];
+  return LEVEL_CONFIG[level-1][subWave-1] || [];
+}
+
+let energyDropTimer = 0;
+let energyDropInterval = 900; // drops every ~15s, randomized
+
+function spawnEnemy(){
+  const waveEnemies = getCurrentWave();
+  if(spawnCount >= waveEnemies.length) return;
+  const type = waveEnemies[spawnCount];
+  const lane = Math.floor(Math.random()*LANES);
+  enemies.push(new Enemy(type, lane));
+  spawnCount++;
+  document.getElementById('hud-enemies').textContent = enemies.filter(e=>!e.dead).length;
+  // Set next spawn delay: 15-20 seconds = 900-1200 frames at 60fps
+  nextSpawnAt = spawnTimer + 900 + Math.floor(Math.random()*300);
+}
+
+// ── PLAYER PANEL ──
+let selectedPlayerType = 'neymar';
+
+function buildPanel(){
+  const panel = document.createElement('div');
+  panel.id = 'player-panel';
+  panel.style.cssText = `position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:50;display:flex;flex-wrap:wrap;gap:6px;padding:6px;justify-content:center;backdrop-filter:blur(10px);`;
+  Object.entries(PLAYER_DEFS).forEach(([type,def])=>{
+    const btn = document.createElement('div');
+    btn.id = 'pbtn-'+type;
+    btn.style.cssText = `background:rgba(20,10,35,0.95);border:1px solid ${def.borderColor}40;border-radius:4px;padding:7px 10px;cursor:pointer;transition:all .2s;min-width:108px;`;
+    btn.innerHTML = `<div style="font-family:'Bebas Neue',cursive;font-size:.9rem;letter-spacing:1.5px;color:${def.borderColor}">${def.name}</div>
+    <div style="font-size:.6rem;color:#666;letter-spacing:1px;margin-top:1px">${def.role}</div>
+    <div style="font-size:.65rem;color:#00bcd4;margin-top:2px" id="cost-${type}">⚡ ${def.cost}</div>`;
+    btn.onclick = ()=>{
+      selectedPlayerType = type;
+      document.querySelectorAll('[id^="pbtn-"]').forEach(b=>b.style.borderColor='rgba(240,192,64,0.15)');
+      btn.style.borderColor = def.borderColor;
+    };
+    panel.appendChild(btn);
+  });
+  document.body.appendChild(panel);
+}
+
+function removePlayer(p){
+  const idx = players.indexOf(p);
+  if(idx>-1) players.splice(idx,1);
+}
+
+// ── CANVAS CLICK — place player or collect energy ──
+canvas.addEventListener('click',e=>{
+  if(state!=='playing'&&state!=='repositioning') return;
+  const cx = e.clientX;
+  const cy = e.clientY - 60;
+
+  // check energy drops first
+  for(let i = energyDrops.length-1; i>=0; i--){
+    const d = energyDrops[i];
+    const dist = Math.sqrt((d.x-cx)**2+(d.y-cy)**2);
+    if(dist < d.r + 10){
+      energy = Math.min(maxEnergy, energy + d.value);
+      spawnParticles(d.x, d.y, '#00bcd4', 6);
+      d.dead = true;
+      energyDrops.splice(i,1);
+      return;
+    }
+  }
+
+  const lane = Math.floor(cy/laneH);
+  if(lane<0||lane>=LANES) return;
+
+  if(state==='repositioning'){
+    if(dragPlayer){
+      dragPlayer.lane = lane;
+      dragPlayer.y = laneY(lane);
+    }
+    return;
+  }
+
+  // Grid-based placement system
+  if(!selectedPlayerType) return;
+  
+  // Determine which slot was clicked
+  const slot = getSlotFromX(cx);
+  
+  // Check if slot is already occupied
+  const occupied = players.some(p=>p.lane===lane && p.slot===slot);
+  if(occupied){
+    showMsg('¡Este espacio está ocupado!');
+    return;
+  }
+
+  const cost = PLAYER_DEFS[selectedPlayerType].cost;
+  if(energy < cost){
+    showMsg(`⚡ Necesitas ${cost} — tienes ${Math.floor(energy)}`);
+    return;
+  }
+
+  // Place the player
+  energy -= cost;
+  const p = new Player(selectedPlayerType, lane, slot);
+  players.push(p);
+  spawnParticles(p.x, p.y, PLAYER_DEFS[selectedPlayerType].borderColor, 6);
+  
+  // Cancel selection after placement
+  selectedPlayerType = null;
+  document.querySelectorAll('[id^="pbtn-"]').forEach(b=>b.style.borderColor='rgba(240,192,64,0.15)');
+  
+  updateCoachBtns();
+});
+
+canvas.addEventListener('mousedown',e=>{
+  if(state!=='repositioning') return;
+  const cx=e.clientX,cy=e.clientY-60;
+  dragPlayer=players.find(p=>Math.abs(p.x-cx)<30&&Math.abs(p.y-cy)<40)||null;
+});
+
+canvas.addEventListener('mousemove',e=>{
+  if(state!=='repositioning'||!dragPlayer) return;
+  dragPlayer.x=e.clientX;
+  dragPlayer.y=e.clientY-60;
+  dragPlayer.lane=Math.floor((e.clientY-60)/laneH);
+});
+
+canvas.addEventListener('mouseup',()=>{
+  if(dragPlayer){
+    dragPlayer.x=140;
+    dragPlayer.y=laneY(dragPlayer.lane);
+    dragPlayer=null;
+  }
+});
+
+// ── COACHES ──
+function updateCoachBtns(){
+  const hasIniesta=players.some(p=>p.type==='iniesta');
+  const pepBtn=document.getElementById('btn-pep');
+  const luiBtn=document.getElementById('btn-lui');
+  const scaBtn=document.getElementById('btn-sca');
+  pepBtn.classList.toggle('disabled',!hasIniesta||coachCooldowns.pep>0||coachUsed.pep);
+  luiBtn.classList.toggle('disabled',coachCooldowns.lui>0||coachUsed.lui);
+  scaBtn.classList.toggle('disabled',coachCooldowns.sca>0||coachUsed.sca);
+}
+
+function activateCoach(id){
+  if(coachCooldowns[id]>0 || coachUsed[id]) return;
+  if(id==='pep'){
+    const hasIniesta=players.some(p=>p.type==='iniesta');
+    if(!hasIniesta){showMsg('¡Necesitas a Iniesta como capitán!');return;}
+    coachUsed.pep = true;
+    guardiolaTimer=420;
+    coachCooldowns.pep=1200;
+    state='repositioning';
+    document.getElementById('reposition-msg').style.display='block';
+    setTimeout(()=>{
+      state='playing';
+      document.getElementById('reposition-msg').style.display='none';
+      document.getElementById('btn-pep').classList.remove('active');
+      dragPlayer=null;
+    },7000);
+  }
+  if(id==='lui'){
+    coachUsed.lui = true;
+    luisTimer=600;
+    coachCooldowns.lui=1500;
+    players.forEach(p=>{if(p.type==='neymar'||p.type==='suarez') p.boosted=true;});
+  }
+  if(id==='sca'){
+    coachUsed.sca = true;
+    scaloniTimer=900;
+    coachCooldowns.sca=1800;
+    const mas=players.find(p=>p.type==='mascherano');
+    if(mas) mas.shieldLanes=1;
+  }
+  document.getElementById('btn-'+id).classList.add('active');
+  updateCoachBtns();
+}
+
+let msgTimeout;
+function showMsg(txt){
+  const el=document.createElement('div');
+  el.style.cssText=`position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(200,30,30,0.9);color:#fff;font-family:'Bebas Neue',cursive;font-size:1rem;letter-spacing:2px;padding:8px 24px;border-radius:3px;z-index:200;`;
+  el.textContent=txt;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),2500);
+}
+
+// ── BACKGROUND ──
+function drawBackground(){
+  getLanes();
+  const stadium = STADIUMS[level-1] || STADIUMS[0];
+
+  ctx.fillStyle='#0e0618';
+  ctx.fillRect(0,0,W(),H());
+
+  // grass field base
+  for(let i=0;i<LANES;i++){
+    ctx.fillStyle = stadium.grass || (i%2===0?'rgba(20,90,20,0.85)':'rgba(15,75,15,0.8)');
+    ctx.fillRect(0, i*laneH, W(), laneH);
+  }
+  drawGrassPattern(level);
+
+  // stadium accent line at top
+  ctx.fillStyle = stadium.accent + '22';
+  ctx.fillRect(0, 0, W(), 4);
+
+  // lane dividers
+  ctx.strokeStyle='rgba(240,192,64,0.06)';
+  ctx.lineWidth=1;
+  ctx.setLineDash([]);
+  for(let i=1;i<LANES;i++){
+    ctx.beginPath();
+    ctx.moveTo(0,i*laneH);
+    ctx.lineTo(W(),i*laneH);
+    ctx.stroke();
+  }
+
+  // grid slots — 8 spaces per lane
+  ctx.strokeStyle='rgba(240,192,64,0.15)';
+  ctx.lineWidth=1.5;
+  for(let slot=0;slot<=NUM_SLOTS;slot++){
+    const x = GRID_START_X - GRID_SLOT_WIDTH/2 + slot * GRID_SLOT_WIDTH;
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, H());
+    ctx.stroke();
+  }
+
+  // base portería left
+  ctx.strokeStyle='rgba(240,192,64,0.3)';
+  ctx.lineWidth=3;
+  ctx.setLineDash([8,4]);
+  ctx.beginPath();
+  ctx.moveTo(50,0);
+  ctx.lineTo(50,H());
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // goal posts left
+  ctx.strokeStyle='rgba(240,192,64,0.5)';
+  ctx.lineWidth=4;
+  ctx.beginPath();
+  ctx.moveTo(20,H()*0.25);ctx.lineTo(50,H()*0.25);
+  ctx.moveTo(20,H()*0.75);ctx.lineTo(50,H()*0.75);
+  ctx.moveTo(20,H()*0.25);ctx.lineTo(20,H()*0.75);
+  ctx.stroke();
+
+  ctx.strokeStyle='rgba(200,50,50,0.15)';
+  ctx.lineWidth=2;
+  ctx.setLineDash([6,6]);
+  ctx.beginPath();
+  ctx.moveTo(W()-50,0);ctx.lineTo(W()-50,H());
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // center circle
+  ctx.strokeStyle='rgba(240,192,64,0.06)';
+  ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.arc(W()/2,H()/2,80,0,Math.PI*2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(W()/2,0);ctx.lineTo(W()/2,H());
+  ctx.stroke();
+
+  // Stadium name watermark
+  ctx.save();
+  ctx.globalAlpha = 0.04;
+  ctx.fillStyle = '#ffffff';
+  ctx.font = `bold ${Math.min(W()/8, 80)}px 'Bebas Neue', cursive`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(stadium.name.toUpperCase(), W()/2, H()/2);
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+function drawGrassPattern(level){
+  getLanes();
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.lineWidth = 1.2;
+  if(level===1){
+    ctx.strokeStyle = 'rgba(190,255,180,0.22)';
+    for(let y = laneH/4; y < H(); y += 24){
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W(), y+12);
+      ctx.stroke();
+    }
+  } else if(level===2){
+    ctx.strokeStyle = 'rgba(170,245,170,0.18)';
+    for(let x = 0; x < W(); x += 28){
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x-14, H());
+      ctx.stroke();
+    }
+  } else if(level===3){
+    ctx.strokeStyle = 'rgba(160,235,160,0.2)';
+    for(let i=0;i<12;i++){
+      const cx = (i + 0.5) * W()/12;
+      const ry = laneH * 0.2;
+      for(let y=laneH*0.5; y<H(); y+=laneH*1.1){
+        ctx.beginPath();
+        ctx.ellipse(cx, y, 14, ry, 0, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
+  } else if(level===4){
+    ctx.strokeStyle = 'rgba(150,225,150,0.2)';
+    for(let i=0;i<25;i++){
+      const x = Math.random()*W();
+      const y = Math.random()*H();
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x+4, y-14);
+      ctx.stroke();
+    }
+  } else {
+    ctx.strokeStyle = 'rgba(180,255,180,0.2)';
+    for(let x = 0; x < W(); x += 40){
+      for(let y = 0; y < H(); y += 40){
+        ctx.beginPath();
+        ctx.arc(x + 12, y + 12, 8, 0, Math.PI*2);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.restore();
+}
+function checkMessi(){
+  // Messi saves available only in levels 1-4
+  if(messiUsed || level===5) return;
+  const reached=enemies.find(e=>!e.dead && e.x<120);
+  if(reached){
+    messiUsed=true;
+    messiActive=true;
+    messiTimer=180;
+    enemies.forEach(e=>{
+      if(!e.dead){
+        e.dead=true;
+        spawnParticles(e.x,e.y,'#f0c040',16);
+        score+=30;
+      }
+    });
+    showWaveAnnounce('MESSI — LIMPIA TODO');
+  }
+}
+
+// ── WAVE / LEVEL LOGIC ──
+let waitingForNextSubWave = false;
+let subWaveDelay = 0;
+
+function checkWaveEnd(){
+  const waveEnemies = getCurrentWave();
+  if(spawnCount >= waveEnemies.length && enemies.every(e=>e.dead) && !waitingForNextSubWave){
+    waitingForNextSubWave = true;
+    subWaveDelay = 120; // 2s pause between sub-waves
+  }
+}
+
+function tickWaveProgress(){
+  if(waitingForNextSubWave){
+    subWaveDelay--;
+    if(subWaveDelay <= 0){
+      waitingForNextSubWave = false;
+      if(subWave < totalSubWaves){
+        // next sub-wave
+        subWave++;
+        spawnCount = 0;
+        spawnTimer = 0;
+        nextSpawnAt = spawnTimer + 900 + Math.floor(Math.random()*300); // 15-20s
+        enemies = [];
+        projectiles = [];
+        document.getElementById('hud-subwave').textContent = subWave+'/'+totalSubWaves;
+        showWaveAnnounce('OLEADA '+subWave);
+        saveProgress();
+      } else {
+        // level complete
+        if(level < totalLevels){
+          level++;
+          subWave = 1;
+          spawnCount = 0;
+          spawnTimer = 0;
+          nextSpawnAt = spawnTimer + 900 + Math.floor(Math.random()*300);
+          enemies = [];
+          projectiles = [];
+          messiUsed = false; // reset messi for new level
+          bossSpawned = false;
+          coachUsed = {pep:false,lui:false,sca:false};
+          document.getElementById('hud-wave').textContent = level+'/'+totalLevels;
+          document.getElementById('hud-subwave').textContent = '1/'+totalSubWaves;
+          const stadium = STADIUMS[level-1];
+          showWaveAnnounce('NIVEL '+level);
+          saveProgress();
+          setTimeout(()=>showStadiumName(stadium.name), 1000);
+        } else {
+          saveProgress();
+          setTimeout(()=>gameWin(), 1500);
+        }
+      }
+    }
+  }
+}
+
+function showWaveAnnounce(txt){
+  const el=document.getElementById('wave-announce');
+  el.textContent=txt;
+  el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0',2200);
+}
+
+function showStadiumName(name){
+  const el=document.getElementById('stadium-name');
+  el.textContent='📍 '+name;
+  el.style.opacity='1';
+  setTimeout(()=>el.style.opacity='0',3000);
+}
+
+function showSIUUU(){
+  const el=document.getElementById('wave-announce');
+  el.textContent='SIIIUUU';
+  el.style.color='#e03030';
+  el.style.fontSize='5rem';
+  el.style.opacity='1';
+  setTimeout(()=>{
+    el.style.opacity='0';
+    el.style.color='#f0c040';
+    el.style.fontSize='4rem';
+    setTimeout(()=>gameOver(),500);
+  },2500);
+}
+
+// ── TIMERS TICK ──
+function tickTimers(){
+  Object.keys(coachCooldowns).forEach(k=>{if(coachCooldowns[k]>0)coachCooldowns[k]--;});
+
+  if(luisTimer>0){
+    luisTimer--;
+    if(luisTimer===0){
+      players.forEach(p=>p.boosted=false);
+      document.getElementById('btn-lui').classList.remove('active');
+    }
+    document.getElementById('timer-lui').textContent=luisTimer>0?Math.ceil(luisTimer/60)+'s':'';
+  }
+  if(scaloniTimer>0){
+    scaloniTimer--;
+    if(scaloniTimer===0){
+      players.forEach(p=>p.shieldLanes=0);
+      document.getElementById('btn-sca').classList.remove('active');
+    }
+    document.getElementById('timer-sca').textContent=scaloniTimer>0?Math.ceil(scaloniTimer/60)+'s':'';
+  }
+  if(guardiolaTimer>0){
+    guardiolaTimer--;
+    document.getElementById('timer-pep').textContent=guardiolaTimer>0?Math.ceil(guardiolaTimer/60)+'s':'';
+  }
+
+  // Update energy bar
+  document.getElementById('energy-fill').style.width=(energy/maxEnergy*100)+'%';
+  document.getElementById('hud-energy').textContent=Math.floor(energy);
+  document.getElementById('hp-fill').style.width=Math.max(0,baseHP)+'%';
+  document.getElementById('hud-enemies').textContent=enemies.filter(e=>!e.dead).length;
+
+  // Update cost colors in panel
+  Object.entries(PLAYER_DEFS).forEach(([type,def])=>{
+    const costEl = document.getElementById('cost-'+type);
+    if(costEl) costEl.style.color = energy >= def.cost ? '#00bcd4' : '#e03030';
+  });
+
+  // Energy drops from sky
+  energyDropTimer++;
+  const dropInt = 480 + Math.floor(Math.random()*240); // ~8-12s random
+  if(energyDropTimer >= dropInt){
+    energyDropTimer = 0;
+    energyDrops.push(new EnergyDrop());
+  }
+
+  // Auto-generate slow energy
+  if(frameCount % 180 === 0){ // every 3s
+    energy = Math.min(maxEnergy, energy + 3);
+  }
+}
+
+// ── GAME LOOP ──
+function loop(){
+  ctx.clearRect(0,0,W(),H());
+  getLanes();
+  drawBackground();
+
+  if(state==='playing'||state==='repositioning'){
+    frameCount++;
+
+    if(state==='playing'){
+      spawnTimer++;
+
+      const waveEnemies = getCurrentWave();
+      // Boss wave special case (level 5, subwave 3)
+      if(level===5 && subWave===3 && !bossSpawned && spawnCount===0){
+        bossSpawned=true;
+        enemies.push(new Enemy('cristiano', Math.floor(LANES/2)));
+        spawnCount=1;
+      }
+
+      // Spawn enemies with 20-30s delay between each
+      if(spawnCount < waveEnemies.length && spawnTimer >= nextSpawnAt){
+        spawnEnemy();
+      }
+
+      checkMessi();
+      checkWaveEnd();
+      tickWaveProgress();
+    }
+
+    // update
+    players.forEach(p=>p.update());
+    enemies.forEach(e=>e.update());
+    projectiles=projectiles.filter(p=>{p.update();return !p.dead;});
+    particles=particles.filter(p=>{p.life>0;p.update();return p.life>0;});
+    energyDrops=energyDrops.filter(d=>{d.update();return !d.dead;});
+
+    tickTimers();
+
+    // draw
+    particles.forEach(p=>p.draw());
+    energyDrops.forEach(d=>d.draw());
+    projectiles.forEach(p=>p.draw());
+    players.forEach(p=>p.draw());
+    enemies.forEach(e=>e.draw());
+
+    if(state==='repositioning'){
+      ctx.fillStyle='rgba(240,192,64,0.05)';
+      ctx.fillRect(0,0,W(),H());
+      ctx.strokeStyle='rgba(240,192,64,0.3)';
+      ctx.lineWidth=2;
+      ctx.setLineDash([10,6]);
+      ctx.strokeRect(5,5,W()-10,H()-10);
+      ctx.setLineDash([]);
+    }
+  }
+
+  requestAnimationFrame(loop);
+}
+
+function gameOver(){
+  state='gameover';
+  const ov=document.getElementById('overlay');
+  ov.innerHTML=`<h1 style="color:#e03030">DERROTA</h1>
+  <p style="color:#ff9999">La horda cruzó tu línea. Score final: <strong style="color:var(--gold)">${score}</strong></p>
+  <button class="btn" onclick="location.reload()">Reintentar</button>`;
+  ov.style.display='flex';
+}
+
+function gameWin(){
+  state='win';
+  const ov=document.getElementById('overlay');
+  ov.innerHTML=`<h1 style="color:var(--gold)">VICTORIA</h1>
+  <p>Detuviste a Cristiano en el Bernabéu. El estadio es tuyo.<br>Score: <strong style="color:var(--gold)">${score}</strong></p>
+  <button class="btn" onclick="location.reload()">Jugar de nuevo</button>`;
+  ov.style.display='flex';
+}
+
+function startGame(){
+  document.getElementById('overlay').style.display='none';
+  state='playing';
+  getLanes();
+  coachUsed = {pep:false,lui:false,sca:false};
+  coachCooldowns = {pep:0,lui:0,sca:0};
+  document.getElementById('btn-pep').classList.remove('active');
+  document.getElementById('btn-lui').classList.remove('active');
+  document.getElementById('btn-sca').classList.remove('active');
+  updateCoachBtns();
+  const tactic = TACTIC_MODES[selectedTactic] || TACTIC_MODES.equilibrada;
+  energy = tactic.energy;
+  baseHP = 100;
+  score = 0;
+  players = [];
+  enemies = [];
+  projectiles = [];
+  particles = [];
+  energyDrops = [];
+  spawnCount = 0;
+  waveCleared = false;
+  bossSpawned = false;
+  frameCount = 0;
+  document.getElementById('hud-energy').textContent = Math.floor(energy);
+  document.getElementById('hud-score').textContent = score;
+  document.getElementById('hp-fill').style.width = '100%';
+  document.getElementById('energy-fill').style.width = (energy/maxEnergy*100) + '%';
+  // First enemy spawns after 15-20 seconds
+  nextSpawnAt = 900 + Math.floor(Math.random()*300);
+  spawnTimer = 0;
+  showWaveAnnounce('OLEADA 1');
+  showStadiumName(STADIUMS[0].name);
+}
+
+updateLobbyInfo();
+loadProgress();
+buildPanel();
+loop();
+</script>
+</body>
+</html>
