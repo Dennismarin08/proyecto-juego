@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fútbol VS Zombies — Exposición</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #06030f;
+      --gold: #f0c040;
+      --gold-dim: rgba(240,192,64,0.12);
+      --gold-glow: rgba(240,192,64,0.35);
+      --cyan: #00e5ff;
+      --purple: #9b5de5;
+      --red: #ff4560;
+      --green: #2ecc71;
+      --text: #f0ecff;
+      --muted: #9189c4;
+      --border: rgba(240,192,64,0.15);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width:100%; height:100%; overflow:hidden; font-family:'Outfit',sans-serif; background:var(--bg); color:var(--text); }
+
+    #particles-canvas { position:fixed; inset:0; z-index:0; pointer-events:none; }
+    body::before {
+      content:''; position:fixed; inset:0;
+      background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+      pointer-events:none; z-index:1;
+    }
+
+    /* ── SLIDES ── */
+    #slides-wrapper { position:fixed; inset:0; z-index:10; overflow:hidden; }
+
+    .slide {
+      position:absolute; inset:0;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      padding:72px 56px 90px;
+      opacity:0; pointer-events:none;
+      transition:opacity 0.5s ease, transform 0.5s ease;
+      transform:translateX(50px);
+    }
+    .slide.active { opacity:1; pointer-events:all; transform:translateX(0); }
+    .slide.exit-left { opacity:0; transform:translateX(-50px); }
+
+    .slide-badge {
+      position:absolute; top:20px; left:50%; transform:translateX(-50%);
+      font-size:0.7rem; font-weight:700; letter-spacing:3px; text-transform:uppercase;
+      color:var(--muted); display:flex; align-items:center; gap:8px; white-space:nowrap;
+    }
+    .slide-badge span { color:var(--gold); }
+
+    /* ── PROGRESS ── */
+    #progress-bar {
+      position:fixed; bottom:0; left:0; height:3px;
+      background:linear-gradient(90deg,var(--gold),var(--cyan));
+      transition:width 0.45s ease; z-index:200;
+      box-shadow:0 0 10px var(--gold-glow);
+    }
+
+    /* ── CONTROLS ── */
+    #nav-controls {
+      position:fixed; bottom:24px; left:50%; transform:translateX(-50%);
+      display:flex; align-items:center; gap:18px; z-index:200;
+    }
+    .nav-btn {
+      background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+      color:var(--text); border-radius:50%; width:46px; height:46px;
+      font-size:1.1rem; cursor:pointer; display:flex; align-items:center; justify-content:center;
+      transition:background 0.2s, border-color 0.2s, transform 0.2s; backdrop-filter:blur(8px);
+    }
+    .nav-btn:hover { background:rgba(240,192,64,0.15); border-color:var(--gold); transform:scale(1.08); }
+    .nav-btn:disabled { opacity:0.22; cursor:default; transform:none; }
+    #slide-counter { font-family:'Bebas Neue',cursive; font-size:1.2rem; letter-spacing:3px; color:var(--muted); min-width:56px; text-align:center; }
+    #slide-counter em { color:var(--gold); font-style:normal; }
+
+    /* ── DOTS ── */
+    #slide-dots {
+      position:fixed; right:24px; top:50%; transform:translateY(-50%);
+      display:flex; flex-direction:column; gap:9px; z-index:200;
+    }
+    .dot { width:7px; height:7px; border-radius:50%; background:rgba(255,255,255,0.18); cursor:pointer; transition:background 0.3s, transform 0.3s; }
+    .dot.active { background:var(--gold); transform:scale(1.5); box-shadow:0 0 7px var(--gold-glow); }
+
+    #key-hint { position:fixed; bottom:24px; right:28px; font-size:0.68rem; letter-spacing:2px; color:rgba(145,137,196,0.45); text-transform:uppercase; z-index:200; }
+
+    /* ── SHARED COMPONENTS ── */
+    .section-label { font-size:0.7rem; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:var(--cyan); margin-bottom:8px; }
+    h2 { font-family:'Bebas Neue',cursive; font-size:clamp(2.2rem,3.8vw,3.4rem); letter-spacing:3px; line-height:1; margin-bottom:10px; }
+    .section-desc { color:var(--muted); font-size:0.97rem; line-height:1.8; max-width:580px; margin-bottom:32px; }
+
+    /* ── ANIM ── */
+    @keyframes fadeUp { from{opacity:0;transform:translateY(26px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+    .slide.active .a1 { animation:fadeUp .55s .04s ease both; }
+    .slide.active .a2 { animation:fadeUp .55s .14s ease both; }
+    .slide.active .a3 { animation:fadeUp .55s .24s ease both; }
+    .slide.active .a4 { animation:fadeUp .55s .34s ease both; }
+    .slide.active .a5 { animation:fadeUp .55s .44s ease both; }
+
+    /* ════════════════════════════
+       SLIDE 1 — PORTADA
+    ════════════════════════════ */
+    .hero-badge {
+      display:inline-flex; align-items:center; gap:8px;
+      background:rgba(0,229,255,0.08); border:1px solid rgba(0,229,255,0.25);
+      border-radius:999px; padding:6px 20px;
+      font-size:0.76rem; font-weight:600; letter-spacing:2px; text-transform:uppercase;
+      color:var(--cyan); margin-bottom:28px;
+    }
+    .hero-badge::before { content:''; width:7px; height:7px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); animation:pulse 1.5s ease-in-out infinite; }
+    .hero-title {
+      font-family:'Bebas Neue',cursive;
+      font-size:clamp(4rem,10vw,9.5rem);
+      line-height:.88; letter-spacing:6px; color:var(--gold);
+      text-shadow:0 0 60px rgba(240,192,64,.4),0 0 120px rgba(240,192,64,.15);
+      text-align:center;
+    }
+    .hero-title span { display:block; color:var(--text); text-shadow:none; font-size:.52em; letter-spacing:10px; margin-top:4px; }
+    .hero-sub { margin-top:24px; font-size:clamp(.95rem,1.7vw,1.15rem); color:var(--muted); max-width:560px; line-height:1.85; text-align:center; }
+    .hero-chips { display:flex; flex-wrap:wrap; gap:9px; justify-content:center; margin-top:28px; }
+    .chip { background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); border-radius:999px; padding:5px 16px; font-size:0.8rem; color:var(--muted); font-weight:500; }
+    .chip.gold  { border-color:rgba(240,192,64,.3); color:var(--gold); background:rgba(240,192,64,.07); }
+    .chip.cyan  { border-color:rgba(0,229,255,.3); color:var(--cyan); background:rgba(0,229,255,.06); }
+    .chip.purple{ border-color:rgba(155,93,229,.3); color:var(--purple); background:rgba(155,93,229,.06); }
+    .chip.red   { border-color:rgba(255,69,96,.3); color:var(--red); background:rgba(255,69,96,.06); }
+
+    /* ════════════════════════════
+       SLIDE 2 — EQUIPO
+    ════════════════════════════ */
+    .team-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:24px; width:100%; max-width:860px; }
+    .member-card {
+      background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);
+      border-radius:22px; padding:32px 22px; text-align:center;
+      transition:transform .3s, border-color .3s, background .3s;
+      position:relative; overflow:hidden;
+    }
+    .member-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),var(--cyan),transparent); }
+    .member-card:hover { transform:translateY(-6px); border-color:rgba(240,192,64,.3); background:var(--gold-dim); }
+    .member-avatar {
+      width:68px; height:68px; border-radius:50%;
+      background:linear-gradient(135deg,rgba(240,192,64,.2),rgba(0,229,255,.15));
+      border:2px solid rgba(240,192,64,.3);
+      display:flex; align-items:center; justify-content:center;
+      font-size:1.9rem; margin:0 auto 16px;
+    }
+    .member-card h3 { font-family:'Bebas Neue',cursive; font-size:1.1rem; letter-spacing:2px; color:var(--gold); margin-bottom:6px; }
+    .member-card p { color:var(--muted); font-size:0.8rem; line-height:1.6; }
+    .member-role { display:inline-block; margin-top:12px; font-size:0.68rem; font-weight:700; letter-spacing:2px; text-transform:uppercase; padding:4px 13px; border-radius:999px; background:rgba(0,229,255,0.1); color:var(--cyan); }
+    .member-role.gold  { background:rgba(240,192,64,0.1); color:var(--gold); }
+    .member-role.purple{ background:rgba(155,93,229,0.1); color:var(--purple); }
+
+    /* ════════════════════════════
+       SLIDE 3 — CÓMO FUNCIONA
+    ════════════════════════════ */
+    .steps-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; width:100%; max-width:960px; }
+    .step { background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:18px; padding:28px 22px; position:relative; overflow:hidden; transition:transform .3s, border-color .3s; }
+    .step:hover { transform:translateY(-5px); border-color:rgba(240,192,64,.25); }
+    .step::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,var(--gold),transparent); opacity:0; transition:opacity .3s; }
+    .step:hover::before { opacity:1; }
+    .step-num { font-family:'Bebas Neue',cursive; font-size:3.5rem; color:rgba(240,192,64,0.1); line-height:1; margin-bottom:12px; }
+    .step h3 { font-size:1.05rem; font-weight:700; margin-bottom:8px; color:var(--gold); }
+    .step p { color:var(--muted); font-size:0.88rem; line-height:1.75; }
+
+    /* ════════════════════════════
+       SLIDE 4 — ENEMIGOS
+    ════════════════════════════ */
+    .enemies-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:14px; width:100%; max-width:960px; }
+    .enemy-card {
+      background:rgba(255,40,40,0.04); border:1px solid rgba(255,69,96,0.15);
+      border-radius:16px; padding:20px 14px; text-align:center;
+      transition:transform .3s, border-color .3s, background .3s;
+    }
+    .enemy-card:hover { transform:translateY(-5px); border-color:rgba(255,69,96,.4); background:rgba(255,69,96,.08); }
+    .enemy-card.boss { border-color:rgba(240,192,64,.3); background:rgba(240,192,64,.05); }
+    .enemy-card.boss:hover { border-color:rgba(240,192,64,.6); background:rgba(240,192,64,.1); }
+    .enemy-emoji { font-size:2rem; display:block; margin-bottom:10px; }
+    .enemy-card h4 { font-family:'Bebas Neue',cursive; font-size:1rem; letter-spacing:2px; color:var(--red); margin-bottom:6px; }
+    .enemy-card.boss h4 { color:var(--gold); }
+    .enemy-card p { color:var(--muted); font-size:0.75rem; line-height:1.55; }
+    .enemy-tag { display:inline-block; margin-top:10px; font-size:0.65rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:3px 10px; border-radius:999px; background:rgba(255,69,96,0.12); color:var(--red); }
+    .enemy-card.boss .enemy-tag { background:rgba(240,192,64,0.12); color:var(--gold); }
+
+    /* ════════════════════════════
+       SLIDE 5 — JUGADORES + SOLES
+    ════════════════════════════ */
+    .players-layout { display:grid; grid-template-columns:1fr 1fr; gap:36px; width:100%; max-width:960px; align-items:start; }
+    .players-list { display:flex; flex-direction:column; gap:12px; }
+    .player-row {
+      display:flex; align-items:center; gap:14px;
+      background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);
+      border-radius:12px; padding:12px 16px;
+      transition:transform .2s, border-color .2s;
+    }
+    .player-row:hover { transform:translateX(4px); border-color:rgba(240,192,64,.25); }
+    .player-icon { width:38px; height:38px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; flex-shrink:0; }
+    .player-info strong { display:block; font-size:0.9rem; color:var(--text); margin-bottom:2px; }
+    .player-info span { font-size:0.76rem; color:var(--muted); }
+    .player-cost { margin-left:auto; font-family:'Bebas Neue',cursive; font-size:1.1rem; color:var(--gold); flex-shrink:0; }
+
+    .soles-box {
+      background:rgba(240,192,64,0.05); border:1px solid rgba(240,192,64,0.2);
+      border-radius:18px; padding:24px;
+    }
+    .soles-box h3 { font-family:'Bebas Neue',cursive; font-size:1.5rem; letter-spacing:2px; color:var(--gold); margin-bottom:12px; }
+    .soles-box p { color:var(--muted); font-size:0.87rem; line-height:1.75; margin-bottom:10px; }
+    .sol-item { display:flex; align-items:flex-start; gap:10px; margin-top:10px; }
+    .sol-item span { font-size:1.3rem; flex-shrink:0; margin-top:2px; }
+    .sol-item p { margin:0; font-size:0.82rem; color:var(--muted); }
+
+    /* ════════════════════════════
+       SLIDE 6 — ENTRENADORES
+    ════════════════════════════ */
+    .coaches-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:22px; width:100%; max-width:860px; }
+    .coach-card {
+      background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07);
+      border-radius:18px; padding:26px 22px; text-align:center;
+      transition:transform .3s, border-color .3s, background .3s;
+      position:relative; overflow:hidden;
+    }
+    .coach-card::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,var(--gold),transparent); opacity:0; transition:opacity .3s; }
+    .coach-card:hover::after { opacity:1; }
+    .coach-card:hover { transform:translateY(-5px); border-color:rgba(240,192,64,.3); background:var(--gold-dim); }
+    .coach-emoji { font-size:2.5rem; display:block; margin-bottom:14px; }
+    .coach-card h4 { font-family:'Bebas Neue',cursive; font-size:1.25rem; letter-spacing:2px; color:var(--gold); margin-bottom:8px; }
+    .coach-card p { color:var(--muted); font-size:0.82rem; line-height:1.65; }
+    .coach-req { display:inline-block; margin-top:12px; font-size:0.65rem; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; padding:3px 11px; border-radius:999px; background:rgba(0,229,255,0.1); color:var(--cyan); }
+
+    /* ════════════════════════════
+       SLIDE 7 — TECNOLOGÍA
+    ════════════════════════════ */
+    .tech-layout { display:grid; grid-template-columns:1fr 1fr; gap:36px; width:100%; max-width:960px; align-items:start; }
+    .tech-list { display:flex; flex-direction:column; gap:13px; }
+    .tech-item { display:flex; align-items:center; gap:14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:13px; padding:15px 17px; }
+    .tech-icon { width:42px; height:42px; border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:1.35rem; flex-shrink:0; }
+    .tech-icon.html { background:rgba(228,77,38,0.15); }
+    .tech-icon.css  { background:rgba(155,93,229,0.15); }
+    .tech-icon.java { background:rgba(248,152,32,0.15); }
+    .tech-icon.sql  { background:rgba(0,114,255,0.15); }
+    .tech-info strong { display:block; font-size:0.92rem; color:var(--text); margin-bottom:3px; }
+    .tech-info span { font-size:0.78rem; color:var(--muted); }
+
+    .arch-diagram { background:rgba(255,255,255,0.02); border:1px solid var(--border); border-radius:18px; padding:26px; display:flex; flex-direction:column; gap:9px; }
+    .arch-row { display:flex; align-items:center; gap:9px; }
+    .arch-box { flex:1; border-radius:9px; padding:9px 12px; text-align:center; font-size:0.8rem; font-weight:600; }
+    .arch-box.gd  { background:rgba(240,192,64,0.08); border:1px solid rgba(240,192,64,0.18); color:var(--gold); }
+    .arch-box.cy  { background:rgba(0,229,255,0.06); border:1px solid rgba(0,229,255,0.2); color:var(--cyan); }
+    .arch-box.pu  { background:rgba(155,93,229,0.06); border:1px solid rgba(155,93,229,0.2); color:var(--purple); }
+    .arch-arrow { color:var(--muted); font-size:.95rem; flex-shrink:0; }
+    .arch-label { font-size:0.65rem; color:var(--muted); text-align:center; letter-spacing:1px; text-transform:uppercase; }
+
+    /* ════════════════════════════
+       SLIDE 8 — CIERRE
+    ════════════════════════════ */
+    .final-title { font-family:'Bebas Neue',cursive; font-size:clamp(3rem,6.5vw,6rem); line-height:.9; letter-spacing:5px; color:var(--gold); text-shadow:0 0 60px rgba(240,192,64,.4); margin-bottom:14px; text-align:center; }
+    .final-sub { color:var(--muted); font-size:1rem; line-height:1.85; max-width:500px; margin:0 auto 32px; text-align:center; }
+    .btn-play { display:inline-flex; align-items:center; gap:10px; background:var(--gold); color:#0e0618; border:none; border-radius:8px; padding:15px 46px; font-family:'Bebas Neue',cursive; font-size:1.35rem; letter-spacing:4px; cursor:pointer; text-decoration:none; box-shadow:0 8px 32px rgba(240,192,64,.3); transition:transform .2s, box-shadow .2s; }
+    .btn-play:hover { transform:translateY(-3px); box-shadow:0 14px 48px rgba(240,192,64,.5); }
+
+    /* ── STATS ROW ── */
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:2px; background:var(--border); border:1px solid var(--border); border-radius:18px; overflow:hidden; width:100%; max-width:900px; margin-top:10px; }
+    .stat-box { background:var(--bg); padding:36px 24px; text-align:center; }
+    .stat-num { font-family:'Bebas Neue',cursive; font-size:3.5rem; color:var(--gold); line-height:1; text-shadow:0 0 20px var(--gold-glow); }
+    .stat-label { color:var(--muted); font-size:0.76rem; letter-spacing:2px; text-transform:uppercase; margin-top:7px; }
+  </style>
+</head>
+<body>
+<canvas id="particles-canvas"></canvas>
+<div id="slides-wrapper">
+
+  <!-- ① PORTADA -->
+  <div class="slide active" style="text-align:center;" data-label="Portada">
+    <div class="slide-badge">Exposición de Programación · <span>1 / 8</span></div>
+    <div class="hero-badge a1">Proyecto Final — Programación</div>
+    <h1 class="hero-title a2">Fútbol VS<span>Zombies</span></h1>
+    <p class="hero-sub a3">Un juego tower defense donde defiendes la base de las hordas del Real Madrid. Posiciona jugadores, recolecta soles y activa entrenadores para sobrevivir 5 niveles.</p>
+    <div class="hero-chips a4">
+      <span class="chip gold">🎮 Tower Defense</span>
+      <span class="chip cyan">⚙️ HTML5 + Canvas</span>
+      <span class="chip purple">☕ Java Backend</span>
+      <span class="chip">🗄️ H2 SQL</span>
+      <span class="chip red">⚽ 5 Enemigos Reales</span>
+    </div>
+  </div>
+
+  <!-- ② EQUIPO -->
+  <div class="slide" data-label="Equipo">
+    <div class="slide-badge">Integrantes · <span>2 / 8</span></div>
+    <div class="a1"><div class="section-label">Quiénes lo hicimos</div></div>
+    <h2 class="a2">Nuestro Equipo</h2>
+    <p class="section-desc a3" style="text-align:center;">Tres desarrolladores, cada uno con un rol claro en el proyecto.</p>
+    <div class="team-grid a4">
+      <div class="member-card">
+        <div class="member-avatar">🎮</div>
+        <h3>Dennis<br>Marin Orozco</h3>
+        <p>Lógica del juego en Canvas, mecánicas de enemigos, animaciones y diseño de la interfaz visual.</p>
+        <span class="member-role gold">Game Logic & Frontend</span>
+      </div>
+      <div class="member-card">
+        <div class="member-avatar">⚙️</div>
+        <h3>Juan Esteban<br>Muñoz Marín</h3>
+        <p>Backend Java con HttpServer, API REST para guardar y cargar progreso, integración con base de datos.</p>
+        <span class="member-role purple">Backend / API REST</span>
+      </div>
+      <div class="member-card">
+        <div class="member-avatar">🗄️</div>
+        <h3>Jose Daniel<br>Orejuela Duque</h3>
+        <p>Base de datos H2 SQL embebida, persistencia de nivel, oleada, score y energía entre sesiones.</p>
+        <span class="member-role">Base de Datos / H2 SQL</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ③ CÓMO FUNCIONA -->
+  <div class="slide" data-label="Mecánicas">
+    <div class="slide-badge">Mecánicas · <span>3 / 8</span></div>
+    <div class="a1"><div class="section-label">Gameplay</div></div>
+    <h2 class="a2">¿Cómo funciona?</h2>
+    <p class="section-desc a3" style="text-align:center; max-width:700px;">El juego tiene 5 niveles, cada uno en un estadio distinto. Cada nivel tiene 3 oleadas de enemigos que escalan en dificultad y velocidad.</p>
+    <div class="steps-grid a4">
+      <div class="step">
+        <div class="step-num">01</div>
+        <h3>☀ Recolecta Soles</h3>
+        <p>Los soles caen del cielo cada ~10 segundos — haz clic en ellos para recolectarlos. Sin soles no puedes colocar jugadores. Fàbregas genera soles extra de forma pasiva.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">02</div>
+        <h3>⚽ Posiciona Jugadores</h3>
+        <p>El tablero tiene 5 carriles y 9 columnas. Cada jugador tiene un costo en soles. Coloca a tus jugadores estratégicamente antes de que lleguen los enemigos por cada carril.</p>
+      </div>
+      <div class="step">
+        <div class="step-num">03</div>
+        <h3>🧟 Sobrevive las Oleadas</h3>
+        <p>3 oleadas por nivel, cada vez con más enemigos y mayor velocidad. Si un enemigo llega a tu portería, pierdes vida de base. Llega a 0 y es Game Over.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ④ ENEMIGOS -->
+  <div class="slide" data-label="Enemigos">
+    <div class="slide-badge">Enemigos · <span>4 / 8</span></div>
+    <div class="a1"><div class="section-label">Horda del Real Madrid</div></div>
+    <h2 class="a2">Los Enemigos</h2>
+    <p class="section-desc a3" style="text-align:center; max-width:700px;">Cada enemigo tiene comportamiento único. Aparecen por la derecha y avanzan por el carril que les toca.</p>
+    <div class="enemies-grid a4">
+      <div class="enemy-card">
+        <span class="enemy-emoji">🎯</span>
+        <h4>Benzema</h4>
+        <p>Dispara proyectiles a distancia sin acercarse. Difícil de bloquear con Mascherano solo.</p>
+        <span class="enemy-tag">Tirador</span>
+      </div>
+      <div class="enemy-card">
+        <span class="enemy-emoji">🧱</span>
+        <h4>Pepe</h4>
+        <p>Muy lento pero con mucha vida (2500 HP). Aguanta muchos golpes antes de caer.</p>
+        <span class="enemy-tag">Tanque</span>
+      </div>
+      <div class="enemy-card">
+        <span class="enemy-emoji">💨</span>
+        <h4>Bale</h4>
+        <p>El más rápido (velocidad x0.55). Puede atravesar tu línea antes de que reacciones.</p>
+        <span class="enemy-tag">Sprinter</span>
+      </div>
+      <div class="enemy-card">
+        <span class="enemy-emoji">🤸</span>
+        <h4>Modric</h4>
+        <p>Puede saltar sobre tus jugadores (3 veces). Cada impacto que recibe lo esquiva hasta agotar sus saltos.</p>
+        <span class="enemy-tag">Saltador</span>
+      </div>
+      <div class="enemy-card boss">
+        <span class="enemy-emoji">👑</span>
+        <h4>Cristiano</h4>
+        <p>Aparece solo en el Nivel 5 Oleada 3. 5000 HP, 250 de daño. Al llegar a tu base hace el SIUUU y termina el juego.</p>
+        <span class="enemy-tag">BOSS FINAL</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑤ JUGADORES + SOLES -->
+  <div class="slide" data-label="Jugadores">
+    <div class="slide-badge">Jugadores y Soles · <span>5 / 8</span></div>
+    <div class="a1"><div class="section-label">Tu Equipo</div></div>
+    <h2 class="a2">Jugadores y Recursos</h2>
+    <div class="players-layout a3">
+      <div class="players-list">
+        <div class="player-row">
+          <div class="player-icon" style="background:rgba(46,204,113,0.15);">⚽</div>
+          <div class="player-info"><strong>Neymar</strong><span>Disparo rápido. Ataca a enemigos en su carril.</span></div>
+          <div class="player-cost">☀75</div>
+        </div>
+        <div class="player-row">
+          <div class="player-icon" style="background:rgba(21,101,192,0.15);">💥</div>
+          <div class="player-info"><strong>Suárez</strong><span>Disparo pesado. Más lento pero más daño.</span></div>
+          <div class="player-cost">☀110</div>
+        </div>
+        <div class="player-row">
+          <div class="player-icon" style="background:rgba(142,36,170,0.15);">🔀</div>
+          <div class="player-info"><strong>Iniesta</strong><span>Redirige proyectiles enemigos hacia ellos mismos.</span></div>
+          <div class="player-cost">☀100</div>
+        </div>
+        <div class="player-row">
+          <div class="player-icon" style="background:rgba(55,71,79,0.15);">🧱</div>
+          <div class="player-info"><strong>Mascherano</strong><span>Tanque con 200 HP. Bloquea el avance enemigo.</span></div>
+          <div class="player-cost">☀60</div>
+        </div>
+        <div class="player-row">
+          <div class="player-icon" style="background:rgba(230,81,0,0.15);">☀</div>
+          <div class="player-info"><strong>Fàbregas</strong><span>No ataca. Genera soles pasivamente cada ~15s.</span></div>
+          <div class="player-cost">☀50</div>
+        </div>
+      </div>
+      <div class="soles-box">
+        <h3>☀ Sistema de Soles</h3>
+        <p>Los soles son la única moneda del juego. Sin ellos no puedes colocar nada.</p>
+        <div class="sol-item"><span>🌤</span><p><strong style="color:var(--gold)">Del cielo:</strong> Caen automáticamente cada ~10 segundos en posición aleatoria. Debes hacer clic para recolectarlos.</p></div>
+        <div class="sol-item"><span>🔋</span><p><strong style="color:var(--gold)">Fàbregas:</strong> Coloca a Fàbregas y genera un sol extra cada 15-20 segundos desde su posición.</p></div>
+        <div class="sol-item"><span>⚠️</span><p><strong style="color:var(--gold)">Al cambiar de nivel</strong> el tablero se reinicia completamente y empiezas con 0 soles.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑥ ENTRENADORES -->
+  <div class="slide" data-label="Entrenadores">
+    <div class="slide-badge">Entrenadores · <span>6 / 8</span></div>
+    <div class="a1"><div class="section-label">Habilidades Especiales por Nivel</div></div>
+    <h2 class="a2">Los Entrenadores</h2>
+    <p class="section-desc a3" style="text-align:center; max-width:680px;">Cada entrenador se activa una sola vez por nivel pulsando su botón. Úsalos en el momento justo — no se pueden recargar hasta el siguiente nivel.</p>
+    <div class="coaches-grid a4">
+      <div class="coach-card">
+        <span class="coach-emoji">🧠</span>
+        <h4>Guardiola</h4>
+        <p>Activa el <strong style="color:var(--gold)">Modo Reposicionamiento</strong> durante 7 segundos. Puedes arrastrar y mover todos tus jugadores libremente por el tablero.</p>
+        <span class="coach-req">⚠ Requiere a Iniesta en el campo</span>
+      </div>
+      <div class="coach-card">
+        <span class="coach-emoji">⚡</span>
+        <h4>Luis Enrique</h4>
+        <p>Activa el <strong style="color:var(--gold)">Modo Turbo x2</strong> durante 10 segundos. Neymar y Suárez disparan el doble de rápido mientras dura el efecto.</p>
+        <span class="coach-req">Sin requisito previo</span>
+      </div>
+      <div class="coach-card">
+        <span class="coach-emoji">🛡️</span>
+        <h4>Scaloni</h4>
+        <p>Activa el <strong style="color:var(--gold)">Escudo x3</strong> durante 15 segundos. Mascherano despliega un campo de fuerza que absorbe el daño en carriles adyacentes.</p>
+        <span class="coach-req">Sin requisito previo</span>
+      </div>
+    </div>
+    <div style="margin-top:20px; background:rgba(240,192,64,0.05); border:1px solid rgba(240,192,64,0.15); border-radius:12px; padding:14px 20px; max-width:860px; width:100%; font-size:0.84rem; color:var(--muted); line-height:1.7;" class="a5">
+      <strong style="color:var(--gold)">🏟 5 Estadios:</strong> Camp Nou → Santiago Bernabéu → Wembley → Río de Janeiro → Bernabéu Final (Boss). Cada nivel reinicia tu tablero y el fondo del campo cambia.
+    </div>
+  </div>
+
+  <!-- ⑦ TECNOLOGÍA + CÓMO LO CONSTRUIMOS -->
+  <div class="slide" data-label="Tecnología">
+    <div class="slide-badge">Cómo lo construimos · <span>7 / 8</span></div>
+    <div class="a1"><div class="section-label">Stack Tecnológico</div></div>
+    <h2 class="a2">Cómo está construido</h2>
+    <div class="tech-layout a3">
+      <div class="tech-list">
+        <div class="tech-item">
+          <div class="tech-icon html">🌐</div>
+          <div class="tech-info"><strong>HTML5 + Canvas API</strong><span>Motor del juego: tablero, colisiones, animaciones de jugadores, enemigos y proyectiles en tiempo real a 60fps</span></div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon css">🎨</div>
+          <div class="tech-info"><strong>CSS3 + JavaScript</strong><span>Interfaz del HUD, panel de jugadores, entrenadores, lobby y mensajes de oleada con transiciones</span></div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon java">☕</div>
+          <div class="tech-info"><strong>Java 17 + HttpServer</strong><span>Servidor REST en puerto 8080. Maneja GET y POST /api/progress para guardar y cargar partidas</span></div>
+        </div>
+        <div class="tech-item">
+          <div class="tech-icon sql">🗄️</div>
+          <div class="tech-info"><strong>H2 SQL Embebido</strong><span>Base de datos que persiste nivel, oleada, score y energía. No necesita instalación aparte — corre dentro de Java</span></div>
+        </div>
+      </div>
+      <div class="arch-diagram a4">
+        <div class="arch-label">Arquitectura del Sistema</div><br>
+        <div class="arch-row">
+          <div class="arch-box gd">🌐 index.html<br><small style="opacity:.7;font-size:.7rem;font-weight:400">Presentación</small></div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box gd">🎮 Juego Canvas<br><small style="opacity:.7;font-size:.7rem;font-weight:400">futbol_vs_zombies_v2</small></div>
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:1.1rem;margin:4px 0;">↕</div>
+        <div class="arch-row">
+          <div class="arch-box cy">📡 Fetch API<br><small style="opacity:.7;font-size:.7rem;font-weight:400">HTTP REST calls</small></div>
+        </div>
+        <div style="text-align:center;color:var(--muted);font-size:1.1rem;margin:4px 0;">↕</div>
+        <div class="arch-row">
+          <div class="arch-box pu">☕ Java Server<br><small style="opacity:.7;font-size:.7rem;font-weight:400">Puerto 8080</small></div>
+          <div class="arch-arrow">↔</div>
+          <div class="arch-box pu">🗄️ H2 SQL<br><small style="opacity:.7;font-size:.7rem;font-weight:400">progress-data</small></div>
+        </div><br>
+        <div class="arch-label">GET /api/progress · POST /api/progress</div>
+        <div class="arch-label" style="margin-top:6px;">mvn compile exec:java → localhost:8080</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ⑧ CIERRE -->
+  <div class="slide" style="text-align:center;" data-label="Cierre">
+    <div class="slide-badge">Cierre · <span>8 / 8</span></div>
+    <div class="hero-badge a1">¡Gracias por su atención!</div>
+    <div class="final-title a2">¡A jugar!</div>
+    <p class="final-sub a3">
+      Defiende la portería, recolecta soles, activa a tus entrenadores y detén a Cristiano antes del <em style="color:var(--gold)">SIUUU</em>.<br><br>
+      <strong style="color:var(--gold)">Dennis · Juan Esteban · Jose Daniel</strong>
+    </p>
+    <a class="btn-play a4" href="futbol_vs_zombies_v2.html">▶ JUGAR AHORA</a>
+  </div>
+
+</div>
+
+<div id="progress-bar"></div>
+<div id="nav-controls">
+  <button class="nav-btn" id="btn-prev">←</button>
+  <div id="slide-counter"><em>1</em> / 8</div>
+  <button class="nav-btn" id="btn-next">→</button>
+</div>
+<div id="slide-dots"></div>
+<div id="key-hint">← → navegar</div>
+
+<script>
+  // Particles
+  const canvas = document.getElementById('particles-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, parts = [];
+  function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  function Particle(){ this.x=Math.random()*W; this.y=Math.random()*H; this.r=Math.random()*1.4+.3; this.vx=(Math.random()-.5)*.22; this.vy=(Math.random()-.5)*.22; this.alpha=Math.random()*.38+.05; this.color=Math.random()>.6?'#f0c040':Math.random()>.5?'#00e5ff':'#9b5de5'; }
+  function initP(){ parts=[]; const n=Math.floor(W*H/14000); for(let i=0;i<n;i++) parts.push(new Particle()); }
+  function animP(){
+    ctx.clearRect(0,0,W,H);
+    parts.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; if(p.x<0)p.x=W; if(p.x>W)p.x=0; if(p.y<0)p.y=H; if(p.y>H)p.y=0; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fillStyle=p.color; ctx.globalAlpha=p.alpha; ctx.fill(); ctx.globalAlpha=1; });
+    requestAnimationFrame(animP);
+  }
+  window.addEventListener('resize',()=>{resize();initP();});
+  resize(); initP(); animP();
+
+  // Slideshow
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let cur = 0, busy = false;
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const counter = document.getElementById('slide-counter');
+  const bar = document.getElementById('progress-bar');
+  const dots = document.getElementById('slide-dots');
+
+  slides.forEach((_,i)=>{ const d=document.createElement('div'); d.className='dot'+(i===0?' active':''); d.onclick=()=>goTo(i); dots.appendChild(d); });
+
+  function goTo(i){
+    if(busy||i===cur) return;
+    busy=true;
+    const prev=cur; cur=i;
+    slides[prev].classList.add('exit-left');
+    slides[prev].classList.remove('active');
+    setTimeout(()=>{ slides[prev].classList.remove('exit-left'); slides[cur].classList.add('active'); busy=false; }, 520);
+    updateUI();
+  }
+  function updateUI(){
+    counter.innerHTML=`<em>${cur+1}</em> / ${total}`;
+    bar.style.width=((cur+1)/total*100)+'%';
+    document.querySelectorAll('.dot').forEach((d,i)=>d.classList.toggle('active',i===cur));
+    btnPrev.disabled=cur===0;
+    btnNext.disabled=cur===total-1;
+  }
+  btnPrev.onclick=()=>{ if(cur>0) goTo(cur-1); };
+  btnNext.onclick=()=>{ if(cur<total-1) goTo(cur+1); };
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'||e.key===' '){ e.preventDefault(); if(cur<total-1) goTo(cur+1); }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); if(cur>0) goTo(cur-1); }
+  });
+  let tx=null;
+  document.addEventListener('touchstart',e=>{ tx=e.touches[0].clientX; });
+  document.addEventListener('touchend',e=>{ if(tx===null)return; const dx=e.changedTouches[0].clientX-tx; if(Math.abs(dx)>50){ if(dx<0&&cur<total-1)goTo(cur+1); if(dx>0&&cur>0)goTo(cur-1); } tx=null; });
+  updateUI();
+</script>
+</body>
+</html>

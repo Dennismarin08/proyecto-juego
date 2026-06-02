@@ -1,0 +1,2015 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fútbol VS Zombies</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box
+    }
+
+    :root {
+      --bg: #0e0618;
+      --lane: #1a0d2e;
+      --lane2: #150a24;
+      --gold: #f0c040;
+      --purple: #3d2070;
+      --white: #f5f0ff;
+      --red: #e03030;
+      --green: #2ecc71;
+      --gray: #888;
+    }
+
+    body {
+      background: var(--bg);
+      font-family: 'Inter', sans-serif;
+      color: var(--white);
+      overflow: hidden;
+      user-select: none
+    }
+
+    #ui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 12px 20px;
+      background: linear-gradient(180deg, rgba(14, 6, 24, 0.98) 0%, rgba(30, 10, 50, 0.95) 100%);
+      border-bottom: 2px solid rgba(240, 192, 64, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    }
+
+    #title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.4rem;
+      letter-spacing: 3px;
+      color: var(--gold);
+      flex-shrink: 0;
+      text-shadow: 0 0 20px rgba(240, 192, 64, 0.6);
+    }
+
+    #hud {
+      display: flex;
+      gap: 1.2rem;
+      align-items: center;
+      flex: 1
+    }
+
+    /* Next wave preview */
+    #next-wave-preview {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      padding-left: 8px;
+      color: #bfbfbf;
+      font-size: 0.8rem;
+    }
+
+    .hud-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px
+    }
+
+    .hud-label {
+      font-size: .55rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: #888;
+      font-weight: 700
+    }
+
+    .hud-val {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.2rem;
+      color: var(--gold);
+      text-shadow: 0 0 10px rgba(240, 192, 64, 0.4);
+    }
+
+    #hp-bar {
+      flex: 1;
+      max-width: 200px
+    }
+
+    #hp-track {
+      width: 100%;
+      height: 10px;
+      background: rgba(30, 15, 50, 0.8);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 4px;
+      border: 1px solid rgba(46, 204, 113, 0.3);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    #hp-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--green), #58d46d);
+      border-radius: 4px;
+      transition: width .3s;
+      box-shadow: 0 0 10px rgba(46, 204, 113, 0.6);
+    }
+
+    #energy-bar-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      flex: 1;
+      max-width: 160px
+    }
+
+    #energy-track {
+      width: 100%;
+      height: 10px;
+      background: rgba(30, 15, 50, 0.8);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 4px;
+      border: 1px solid rgba(0, 188, 212, 0.3);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    #energy-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #00bcd4, #00e5ff);
+      border-radius: 4px;
+      transition: width .6s;
+      box-shadow: 0 0 10px rgba(0, 188, 212, 0.8);
+    }
+
+    #wave-announce {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Bebas Neue', cursive;
+      font-size: 4rem;
+      letter-spacing: 6px;
+      color: var(--gold);
+      text-shadow: 0 0 40px rgba(240, 192, 64, 0.5);
+      z-index: 200;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .3s;
+      text-align: center;
+    }
+
+    #stadium-name {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2rem;
+      letter-spacing: 4px;
+      color: #b09fff;
+      text-shadow: 0 0 20px rgba(176, 159, 255, 0.5);
+      z-index: 199;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .3s;
+      text-align: center;
+      margin-top: 80px;
+    }
+
+    #overlay {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(240,192,64,0.2), transparent 35%), rgba(14, 6, 24, 0.98);
+      backdrop-filter: blur(4px);
+      z-index: 300;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 1.5rem;
+      padding: 20px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    #overlay h1 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 3.5rem;
+      letter-spacing: 5px;
+      color: var(--gold)
+    }
+
+    .fade-in {
+      opacity: 0;
+      animation: fadeIn 0.5s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    #overlay p {
+      color: #b09fff;
+      font-size: .95rem;
+      max-width: 480px;
+      text-align: center;
+      line-height: 1.6
+    }
+
+    #overlay .btn {
+      background: linear-gradient(135deg, #f8d56b, #f0c040);
+      color: #0e0618;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.4rem;
+      letter-spacing: 2px;
+      padding: 14px 42px;
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(240, 192, 64, 0.35);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    #overlay .btn:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, #ffd65c, #f6c034);
+      box-shadow: 0 18px 34px rgba(240, 192, 64, 0.45);
+    }
+
+    #overlay .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #fff;
+      border: 1px solid rgba(240, 192, 64, 0.18);
+      border-radius: 999px;
+      padding: 12px 32px;
+      letter-spacing: 1px;
+    }
+
+    .lobby-box {
+      width: min(760px, calc(100% - 40px));
+      padding: 2.5rem;
+      background: linear-gradient(180deg, rgba(20, 10, 40, 0.98), rgba(11, 5, 25, 0.96));
+      border: 1px solid rgba(240, 192, 64, 0.15);
+      border-radius: 28px;
+      box-shadow: 0 35px 90px rgba(0, 0, 0, 0.35);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lobby-box::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at top, rgba(240, 192, 64, 0.12), transparent 35%);
+      pointer-events: none;
+      opacity: 0.8;
+    }
+
+    .lobby-box > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .lobby-box h1 {
+      text-shadow: 0 0 15px rgba(240, 192, 64, 0.35);
+    }
+
+    .lobby-box h1 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 3.2rem;
+      letter-spacing: 4px;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .lobby-box p {
+      color: #d8c9ff;
+      line-height: 1.8;
+      font-size: 1rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .lobby-box .hint {
+      color: #888;
+      font-size: 0.82rem;
+      margin-top: 0.4rem;
+    }
+
+    .lobby-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    .cinematic-screen {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      width: min(900px, calc(100% - 40px));
+      padding: 2.5rem;
+      background: rgba(10, 6, 18, 0.95);
+      border: 1px solid rgba(240, 192, 64, 0.18);
+      border-radius: 24px;
+      box-shadow: 0 30px 80px rgba(0, 0, 0, 0.35);
+      text-align: center;
+    }
+
+    .cinematic-text {
+      color: #d8c9ff;
+      font-size: 1rem;
+      line-height: 1.8;
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    .cinematic-cards {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      width: 100%;
+    }
+
+    .cine-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(240, 192, 64, 0.15);
+      border-radius: 18px;
+      padding: 14px;
+      text-align: center;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      justify-content: space-between;
+    }
+
+    .cine-card img {
+      width: 100%;
+      height: 100px;
+      object-fit: cover;
+      border-radius: 14px;
+      filter: saturate(1.1) brightness(1.05);
+    }
+
+    .cine-card .name {
+      font-family: 'Bebas Neue', cursive;
+      color: var(--gold);
+      font-size: 1.1rem;
+      margin-top: 4px;
+    }
+
+    .cine-card .desc {
+      color: #b0aedd;
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    .cinematic-footer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      align-items: center;
+    }
+
+    @media (max-width: 820px) {
+      .cinematic-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 560px) {
+      .cinematic-cards {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .lobby-box h1 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 3.2rem;
+      letter-spacing: 4px;
+      color: var(--gold);
+      margin-bottom: 1rem;
+    }
+
+    .lobby-box p {
+      color: #d8c9ff;
+      line-height: 1.8;
+      font-size: 1rem;
+      margin-bottom: 0.6rem;
+    }
+
+    .lobby-box .hint {
+      color: #888;
+      font-size: 0.82rem;
+      margin-top: 0.4rem;
+    }
+
+    .lobby-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 2rem;
+    }
+
+    #coach-panel {
+      position: fixed;
+      right: 16px;
+      top: 70px;
+      z-index: 50;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* Player selection cards */
+    #player-panel { gap: 6px; padding: 6px; flex-direction: column; width: 70px; height: auto; max-height: calc(100vh - 200px); }
+    .player-card { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.25)); border-radius:6px; padding:4px; width:60px; text-align:center; cursor:pointer; border:1px solid transparent; transition:transform .12s, box-shadow .12s, border-color .12s; flex-shrink: 0; }
+    .player-card img { width:100%; height:40px; object-fit:cover; border-radius:4px; display:block; }
+    .player-card .pname { font-family:'Bebas Neue',cursive; color:var(--gold); margin-top:2px; font-size:0.65rem; }
+    .player-card .prole { color:#bfbfbf; font-size:0.5rem; margin-top:1px; }
+    .player-card .pcost { margin-top:2px; font-weight:700; color:#f0c040; font-size: 0.6rem; }
+    .player-card.selected { transform:scale(1.08); box-shadow:0 4px 10px rgba(0,0,0,0.6); border-color:rgba(240,192,64,0.9); }
+
+    .coach-btn {
+      background: linear-gradient(135deg, rgba(30, 15, 50, 0.95), rgba(20, 10, 40, 0.9));
+      border: 2px solid rgba(240, 192, 64, 0.35);
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+      text-align: center;
+      transition: all .2s;
+      min-width: 110px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .coach-btn:hover:not(.disabled) {
+      border-color: var(--gold);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(240, 192, 64, 0.3);
+      background: linear-gradient(135deg, rgba(40, 20, 60, 0.95), rgba(30, 15, 45, 0.9));
+    }
+
+    .coach-btn.disabled {
+      opacity: .35;
+      cursor: not-allowed
+    }
+
+    .coach-btn.active {
+      border-color: var(--gold);
+      background: linear-gradient(135deg, rgba(240, 192, 64, 0.2), rgba(240, 192, 64, 0.1));
+      box-shadow: 0 0 20px rgba(240, 192, 64, 0.4);
+    }
+
+    .coach-name {
+      font-family: 'Bebas Neue', cursive;
+      font-size: .95rem;
+      letter-spacing: 2px;
+      color: var(--gold);
+      text-shadow: 0 0 8px rgba(240, 192, 64, 0.3);
+    }
+
+    .coach-desc {
+      font-size: .62rem;
+      color: #888;
+      letter-spacing: .5px;
+      margin-top: 2px
+    }
+
+    .coach-timer {
+      font-family: 'Bebas Neue', cursive;
+      font-size: .85rem;
+      color: #b09fff;
+      margin-top: 3px;
+      text-shadow: 0 0 6px rgba(176, 159, 255, 0.3);
+    }
+
+    #reposition-msg {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, rgba(240, 192, 64, 0.25), rgba(240, 192, 64, 0.1));
+      border: 2px solid rgba(240, 192, 64, 0.6);
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.1rem;
+      letter-spacing: 2px;
+      color: var(--gold);
+      padding: 12px 32px;
+      border-radius: 8px;
+      z-index: 60;
+      display: none;
+      box-shadow: 0 8px 32px rgba(240, 192, 64, 0.3);
+      text-shadow: 0 0 10px rgba(240, 192, 64, 0.4);
+    }
+
+    canvas {
+      display: block;
+      position: fixed;
+      top: 60px;
+      left: 0;
+    }
+
+    #pause-menu {
+      position: fixed;
+      inset: 0;
+      background: rgba(14, 6, 24, 0.98);
+      z-index: 400;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      backdrop-filter: blur(8px);
+    }
+
+    #pause-menu h1 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 4rem;
+      letter-spacing: 6px;
+      color: var(--gold);
+      text-shadow: 0 0 40px rgba(240, 192, 64, 0.6);
+    }
+
+    #pause-menu .pause-buttons {
+      display: flex;
+      gap: 2rem;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #pause-menu button {
+      background: linear-gradient(135deg, rgba(240, 192, 64, 0.2), rgba(240, 192, 64, 0.05));
+      border: 2px solid rgba(240, 192, 64, 0.6);
+      color: var(--gold);
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.2rem;
+      letter-spacing: 3px;
+      padding: 16px 48px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-transform: uppercase;
+    }
+
+    #pause-menu button:hover {
+      background: linear-gradient(135deg, rgba(240, 192, 64, 0.4), rgba(240, 192, 64, 0.2));
+      box-shadow: 0 0 20px rgba(240, 192, 64, 0.6);
+      transform: translateY(-2px);
+    }
+
+    #save-btn {
+      background: linear-gradient(135deg, rgba(46, 204, 113, 0.2), rgba(46, 204, 113, 0.05));
+      border: 2px solid rgba(46, 204, 113, 0.6);
+      color: var(--green);
+      padding: 8px 16px;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      margin-left: 1rem;
+    }
+
+    #save-btn:hover {
+      background: linear-gradient(135deg, rgba(46, 204, 113, 0.4), rgba(46, 204, 113, 0.2));
+      box-shadow: 0 0 15px rgba(46, 204, 113, 0.6);
+    }
+  </style>
+</head>
+
+<body>
+
+  <div id="ui">
+    <div id="title">⚽ FVZ</div>
+    <div id="hud">
+      <div class="hud-item">
+        <span class="hud-label">Nivel</span>
+        <span class="hud-val" id="hud-wave">1</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Oleada</span>
+        <span class="hud-val" id="hud-subwave">1/3</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Zombies</span>
+        <span class="hud-val" id="hud-enemies">0</span>
+      </div>
+        <div id="next-wave-preview" title="Siguiente oleada">
+          <span style="font-size:.7rem;color:#888;letter-spacing:1px">Próx:</span>
+          <div id="next-wave-list" style="display:flex;gap:6px;align-items:center"></div>
+        </div>
+      <div class="hud-item" id="hp-bar">
+        <span class="hud-label">Base</span>
+        <div id="hp-track">
+          <div id="hp-fill" style="width:100%"></div>
+        </div>
+      </div>
+      <div id="energy-bar-container">
+        <span class="hud-label" style="color:#f0c040">☀ Soles</span>
+        <div id="energy-track">
+          <div id="energy-fill" style="width:0%"></div>
+        </div>
+        <span class="hud-val" id="hud-energy">0</span>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Score</span>
+        <span class="hud-val" id="hud-score">0</span>
+      </div>
+      <button id="save-btn" onclick="saveAndShow()">💾 Guardar</button>
+    </div>
+  </div>
+
+  <div id="coach-panel">
+    <div class="coach-btn" id="btn-pep" onclick="activateCoach('pep')">
+      <div class="coach-name">Guardiola</div>
+      <div class="coach-desc">Reorganiza 7s<br>(req. Iniesta)</div>
+      <div class="coach-timer" id="timer-pep"></div>
+    </div>
+    <div class="coach-btn" id="btn-lui" onclick="activateCoach('lui')">
+      <div class="coach-name">Luis Enrique</div>
+      <div class="coach-desc">Turbo x2 — 10s</div>
+      <div class="coach-timer" id="timer-lui"></div>
+    </div>
+    <div class="coach-btn" id="btn-sca" onclick="activateCoach('sca')">
+      <div class="coach-name">Scaloni</div>
+      <div class="coach-desc">Muro x3 — 15s</div>
+      <div class="coach-timer" id="timer-sca"></div>
+    </div>
+  </div>
+
+  <div id="reposition-msg">MODO GUARDIOLA — Arrastra tus jugadores libremente (7s)</div>
+  <div id="wave-announce"></div>
+  <div id="stadium-name"></div>
+
+  <div id="pause-menu">
+    <h1>⏸ PAUSADO</h1>
+    <div class="pause-buttons">
+      <button onclick="togglePause()">CONTINUAR (P)</button>
+      <button onclick="saveAndShow()">💾 GUARDAR PROGRESO</button>
+      <button onclick="location.reload()">🔄 MENÚ PRINCIPAL</button>
+    </div>
+    <p style="color: #888; font-size: 0.85rem; margin-top: 2rem; text-align: center; max-width: 400px;">
+      Presiona <strong>P</strong> para pausar/reanudar | <strong>CTRL+S</strong> para guardar rápido
+    </p>
+  </div>
+
+  <!-- LOBBY / CINEMÁTICA -->
+  <div id="overlay">
+    <div class="lobby-box" id="lobby-screen">
+      <h1>⚽ Fútbol VS Zombies</h1>
+      <p>Bienvenido al Bernabéu, donde Messi es el campeón del mundo y el trofeo está en riesgo.</p>
+      <p class="hint">Antes de la partida, vive la cinemática de los defensores que se preparan para el enfrentamiento.</p>
+      <div class="lobby-actions">
+        <button class="btn" onclick="showCinematic()">▶ NUEVA PARTIDA</button>
+        <button class="btn btn-secondary" id="continue-btn" style="display:none;" onclick="continueProgress()">Continuar partida</button>
+        <a class="btn btn-secondary" href="index.html">← Menú</a>
+      </div>
+    </div>
+
+    <div class="cinematic-screen hidden" id="cinematic-screen">
+      <h1>PROLOGO</h1>
+      <div class="cinematic-text" id="cinematic-text">
+        <p>Messi acaba de ganar otro título legendario, pero una sombra se aproxima al estadio.</p>
+        <p>Un rival misterioso ha enviado hordas de zombis para robar su campeonato y romper la defensa del Bernabéu.</p>
+        <p>Necesita más que talento: necesita un equipo de defensores de élite para detener la amenaza.</p>
+      </div>
+      <div class="cinematic-cards" id="cinematic-cards">
+        <div class="cine-card">
+          <img src="uploads/INIESTA.webp" alt="Iniesta">
+          <div class="name">Iniesta</div>
+          <div class="desc">El cerebro del equipo. Su magia reorganiza la defensa y da control total.</div>
+        </div>
+        <div class="cine-card">
+          <img src="uploads/NEYMAR.jpg" alt="Neymar">
+          <div class="name">Neymar</div>
+          <div class="desc">Rápido y feroz, llega con velocidad para frenar a los enemigos más peligrosos.</div>
+        </div>
+        <div class="cine-card">
+          <img src="uploads/SUAREZ.jpg" alt="Suárez">
+          <div class="name">Suárez</div>
+          <div class="desc">El delantero que no se rinde. Cada golpe empuja a la horda hacia atrás.</div>
+        </div>
+        <div class="cine-card">
+          <img src="uploads/MASCHERANO.avif" alt="Mascherano">
+          <div class="name">Mascherano</div>
+          <div class="desc">El muro de la defensa. Su presencia detiene los embates del enemigo.</div>
+        </div>
+      </div>
+      <div class="cinematic-footer">
+        <button class="btn" id="cinematic-next" onclick="advanceCinematic()">CONTINUAR</button>
+        <button class="btn btn-secondary" onclick="skipCinematic()">SALTAR CINEMÁTICA</button>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="c"></canvas>
+
+  <script>
+    const canvas = document.getElementById('c');
+    const ctx = canvas.getContext('2d');
+    const W = () => window.innerWidth;
+    const H = () => window.innerHeight - 60;
+    const API_BASE = 'http://localhost:8080/api';
+    const USER_ID = 'player-default';
+    let savedProgress = null;
+
+    function resize() { canvas.width = W(); canvas.height = H(); }
+    resize();
+    window.addEventListener('resize', resize);
+    // Recalc grid offset when resizing so panel space stays reserved
+    const _origResize = resize;
+    function resizeAndUpdate() { _origResize(); updateGridOffset(); }
+    window.removeEventListener('resize', resize);
+    window.addEventListener('resize', resizeAndUpdate);
+    resizeAndUpdate();
+
+    // ── SAVE / LOAD ──
+    function updateContinueBtn() {
+      const b = document.getElementById('continue-btn');
+      if (!b) return;
+      b.style.display = savedProgress ? 'inline-flex' : 'none';
+    }
+
+    function saveProgressToStorage(progress) {
+      try {
+        localStorage.setItem('fvz-progress', JSON.stringify(progress));
+      } catch (error) {
+        console.warn('No se pudo guardar en localStorage:', error);
+      }
+    }
+
+    function loadProgressFromStorage() {
+      try {
+        const raw = localStorage.getItem('fvz-progress');
+        return raw ? JSON.parse(raw) : null;
+      } catch (error) {
+        return null;
+      }
+    }
+
+    function saveProgress() {
+      const payload = { userId: USER_ID, level, subWave, score, energy };
+      fetch(`${API_BASE}/progress`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(r => r.json())
+        .then(() => {
+          savedProgress = payload;
+          saveProgressToStorage(payload);
+          updateContinueBtn();
+          showMsg('✅ Progreso guardado con éxito');
+        })
+        .catch(() => {
+          savedProgress = payload;
+          saveProgressToStorage(payload);
+          updateContinueBtn();
+          showMsg('⚠️ Guardado localmente. El backend no respondió.');
+        });
+    }
+    function loadProgress() {
+      fetch(`${API_BASE}/progress?userId=${encodeURIComponent(USER_ID)}`)
+        .then(r => { if (!r.ok) throw new Error(); return r.json(); })
+        .then(d => {
+          savedProgress = d;
+          saveProgressToStorage(d);
+          updateContinueBtn();
+        })
+        .catch(() => {
+          const stored = loadProgressFromStorage();
+          if (stored) {
+            savedProgress = stored;
+            updateContinueBtn();
+            showMsg('✅ Progreso cargado desde almacenamiento local');
+          } else {
+            savedProgress = null;
+            updateContinueBtn();
+          }
+        });
+    }
+    function continueProgress() {
+      if (!savedProgress) {
+        showMsg('No hay progreso guardado para continuar.');
+        return;
+      }
+      level = savedProgress.level || 1; subWave = savedProgress.subWave || 1;
+      score = savedProgress.score || 0; energy = savedProgress.energy || 0;
+      resetForLevel(false);
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('cinematic-screen').classList.add('hidden');
+      document.getElementById('lobby-screen').classList.remove('hidden');
+      state = 'playing';
+      showWaveAnnounce(`CONTINUANDO NIVEL ${level}`);
+      showStadiumName((STADIUMS[level - 1] || STADIUMS[0]).name);
+    }
+
+    const cinematicTexts = [
+      'Messi acaba de ganar otro título legendario, pero una sombra se aproxima al estadio.',
+      'Un rival misterioso ha enviado hordas de zombis para robar su campeonato y romper la defensa del Bernabéu.',
+      'Solo los mejores defensores podrán mantener el trofeo a salvo. Iniesta, Neymar, Suárez y Mascherano ya están listos.',
+      'Es hora de unir fuerzas, colocar a los mejores jugadores y proteger a Messi. ¡La batalla empieza ahora!'
+    ];
+    let cinematicStep = 0;
+
+    function showCinematic() {
+      cinematicStep = 0;
+      document.getElementById('lobby-screen').classList.add('hidden');
+      document.getElementById('cinematic-screen').classList.remove('hidden');
+      document.getElementById('overlay').style.display = 'flex';
+      updateCinematic();
+    }
+
+    function advanceCinematic() {
+      cinematicStep++;
+      updateCinematic();
+    }
+
+    function skipCinematic() {
+      finishCinematic();
+    }
+
+    function updateCinematic() {
+      const text = cinematicTexts[cinematicStep] || '';
+      const textEl = document.getElementById('cinematic-text');
+      const nextBtn = document.getElementById('cinematic-next');
+      if (!textEl || !nextBtn) return;
+      if (cinematicStep >= cinematicTexts.length) {
+        finishCinematic();
+        return;
+      }
+      textEl.classList.remove('fade-in');
+      void textEl.offsetWidth;
+      textEl.innerHTML = `<p>${text}</p>`;
+      textEl.classList.add('fade-in');
+      nextBtn.textContent = cinematicStep === cinematicTexts.length - 1 ? 'EMPEZAR PARTIDA' : 'CONTINUAR';
+    }
+
+    function finishCinematic() {
+      document.getElementById('overlay').style.display = 'none';
+      document.getElementById('cinematic-screen').classList.add('hidden');
+      document.getElementById('lobby-screen').classList.remove('hidden');
+      state = 'playing';
+      getLanes();
+      resetForLevel(true);
+      showWaveAnnounce('OLEADA 1');
+      showStadiumName(STADIUMS[0].name);
+    }
+
+    // ── STADIUMS ──
+    const STADIUMS = [
+      { name: 'Camp Nou', grass: '#1e4d1e', grassAlt: '#195019' },
+      { name: 'Santiago Bernabéu', grass: '#1a4a1a', grassAlt: '#163c16' },
+      { name: 'Wembley', grass: '#174017', grassAlt: '#123412' },
+      { name: 'Río de Janeiro', grass: '#155a15', grassAlt: '#114a11' },
+      { name: 'Bernabéu — Final', grass: '#1a4a1a', grassAlt: '#1f501f' },
+    ];
+
+    // ── GAME STATE ──
+    let state = 'overlay';
+    let isPaused = false;
+    let score = 0;
+    let baseHP = 100;
+    let level = 1;
+    let totalLevels = 5;
+    let subWave = 1;
+    let totalSubWaves = 3;
+    let spawnTimer = 0;
+    let nextSpawnAt = 0;
+    let spawnCount = 0;
+    let waitingForNextSubWave = false;
+    let subWaveDelay = 0;
+    let bossSpawned = false;
+    let frameCount = 0;
+    let messiUsed = false;
+    let guardiolaTimer = 0;
+    let luisTimer = 0;
+    let scaloniTimer = 0;
+    let repositionMode = false;
+    let dragPlayer = null;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let coachCooldowns = { pep: 0, lui: 0, sca: 0 };
+    let coachUsed = { pep: false, lui: false, sca: false };
+
+    // ── ENERGY — empieza en 0, solo soles ──
+    let energy = 0;
+    let maxEnergy = 999999;
+    let energyDrops = [];
+    let energyDropTimer = 0;
+
+    // ── GRID ──
+    const LANES = 5;
+    let laneH, laneY_fn;
+    function getLanes() { laneH = H() / LANES; laneY_fn = i => i * laneH + laneH / 2; }
+    function laneY(i) { return i * laneH + laneH / 2; }
+
+    let GRID_START_X = 160; // desplazado a la derecha para dejar espacio al panel lateral
+    const GRID_SLOT_W = 80;
+    const NUM_SLOTS = 9;
+    function getSlotX(s) { return GRID_START_X + s * GRID_SLOT_W; }
+    function getSlotFromX(x) { return Math.max(0, Math.min(NUM_SLOTS - 1, Math.round((x - GRID_START_X) / GRID_SLOT_W))); }
+
+    // Cell highlight when hovering
+    let hoverCell = { lane: -1, slot: -1 };
+    let litCells = []; // [{lane, slot, timer}]
+
+    function lightCell(lane, slot) {
+      litCells = litCells.filter(c => !(c.lane === lane && c.slot === slot));
+      litCells.push({ lane, slot, timer: 45 });
+    }
+
+    // ── PLAYER DEFS ──
+    const PLAYER_DEFS = {
+      neymar: { name: 'Neymar', initials: 'NEY', color: '#1a9e3f', borderColor: '#2ecc71', skinColor: '#c8854a', shirtColor: '#f9e526', shirtStripe: '#1a9e3f', fireRate: 84, damage: 50, hp: 70, maxHP: 70, role: 'Disparo Suave', cost: 75 },
+      suarez: { name: 'Suárez', initials: 'SUA', color: '#1565c0', borderColor: '#5b8dee', skinColor: '#d4956a', shirtColor: '#1565c0', shirtStripe: '#0d47a1', fireRate: 150, damage: 70, hp: 95, maxHP: 95, role: 'Disparo Pesado', cost: 110 },
+      iniesta: { name: 'Iniesta', initials: 'INI', color: '#8e24aa', borderColor: '#ce93d8', skinColor: '#c5906a', shirtColor: '#6a1b9a', shirtStripe: '#4a148c', fireRate: 9999, damage: 0, hp: 90, maxHP: 90, role: 'Redirige proyectiles', cost: 100 },
+      mascherano: { name: 'Mascherano', initials: 'MAS', color: '#37474f', borderColor: '#90a4ae', skinColor: '#b87a50', shirtColor: '#37474f', shirtStripe: '#263238', fireRate: 9999, damage: 0, hp: 200, maxHP: 200, role: '🧱 Tanque', cost: 60 },
+      fabregas: { name: 'Fàbregas', initials: 'FAB', color: '#e65100', borderColor: '#ff9800', skinColor: '#d4956a', shirtColor: '#e65100', shirtStripe: '#bf360c', fireRate: 9999, damage: 0, hp: 60, maxHP: 60, role: '☀ Genera Soles', cost: 50, isGenerator: true },
+    };
+
+    // ── ARRAYS ──
+    let players = [];
+    let enemies = [];
+    let projectiles = [];
+    let particles = [];
+
+    // ── PLAYER CLASS ──
+    class Player {
+      constructor(type, lane, slot) {
+        const d = PLAYER_DEFS[type];
+        Object.assign(this, JSON.parse(JSON.stringify(d)));
+        this.type = type; this.lane = lane; this.slot = slot;
+        this.x = getSlotX(slot); this.y = laneY(lane);
+        this.fireTimer = 0; this.boosted = false; this.shieldLanes = 0; this.wobble = 0;
+        // Fabregas sol generator
+        this.genTimer = 0;
+        this.genDelay = type === 'fabregas' ? 900 : 0; // first sol at 15s
+        this.genRate = 900; // subsequent
+        this.pulse = 0;
+      }
+
+      update() {
+        this.fireTimer++;
+        let rate = this.fireRate;
+        if (this.boosted && (this.type === 'neymar' || this.type === 'suarez')) rate = Math.floor(rate / 2);
+
+        // FABREGAS — genera soles (NO dispara)
+        if (this.type === 'fabregas') {
+          this.genTimer++;
+          this.pulse = (this.pulse + 0.05) % (Math.PI * 2);
+          if (this.genTimer >= this.genDelay) {
+            this.genTimer = 0;
+            this.genDelay = 900 + Math.floor(Math.random() * 300); // 15 to 20s
+            // Spawn a sol drop at Fabregas position
+            energyDrops.push(new EnergyDrop(this.x, this.y - 20, 25));
+            spawnParticles(this.x, this.y, '#f0c040', 6);
+          }
+          if (this.wobble > 0) this.wobble -= 1.5;
+          return;
+        }
+
+        // MASCHERANO — solo bloquea
+        if (this.type === 'mascherano') {
+          if (this.wobble > 0) this.wobble -= 1.5;
+          return;
+        }
+
+        // INIESTA — intercepta proyectiles enemigos
+        if (this.type === 'iniesta') {
+          for (let i = projectiles.length - 1; i >= 0; i--) {
+            const proj = projectiles[i];
+            if (!proj._isEnemy && !proj._redirected && proj.targetLane === this.lane && Math.abs(proj.x - this.x) < 40) {
+              const nearest = enemies.filter(e => !e.dead).sort((a, b) => a.x - b.x)[0];
+              if (nearest) {
+                proj._redirected = true; proj.dmg = Math.max(1, proj.dmg * 0.5);
+                proj.homing = true; proj.target = nearest;
+                proj.targetLane = nearest.lane; proj.destY = laneY(nearest.lane);
+                proj.color = '#ce93d8'; proj.style = 'ball'; proj.speed = 6;
+                this.wobble = 8; spawnParticles(this.x, this.y, '#ce93d8', 5);
+              }
+            }
+          }
+          if (this.wobble > 0) this.wobble -= 1.5;
+          return;
+        }
+
+        // NEYMAR / SUAREZ — disparan
+        const target = enemies.find(e => !e.dead && e.lane === this.lane);
+        if (target && this.fireTimer >= rate) {
+          this.fireTimer = 0; this.wobble = 8;
+          if (this.type === 'neymar') projectiles.push(new Projectile(this.x + 30, this.y, 1, this.damage, this.lane, 'ball', '#f9e526', false));
+          else if (this.type === 'suarez') projectiles.push(new Projectile(this.x + 30, this.y, 1, this.damage, this.lane, 'ball-heavy', '#e03030', false));
+        }
+        if (this.wobble > 0) this.wobble -= 1.5;
+      }
+
+      draw() {
+        const cx = this.x, cy = this.y + Math.sin(this.wobble) * 2;
+        getLanes();
+        if (this.type === 'fabregas') {
+          const auraR = 30 + Math.sin(this.pulse) * 6;
+          ctx.save(); ctx.globalAlpha = 0.12 + Math.sin(this.pulse) * 0.08;
+          ctx.fillStyle = '#f0c040'; ctx.beginPath();
+          ctx.arc(cx, cy, auraR, 0, Math.PI * 2); ctx.fill();
+          const genPct = this.genDelay ? this.genTimer / this.genDelay : 0;
+          ctx.strokeStyle = '#f0c040'; ctx.lineWidth = 3; ctx.globalAlpha = 0.7;
+          ctx.beginPath(); ctx.arc(cx, cy, 36, -Math.PI / 2, -Math.PI / 2 + genPct * Math.PI * 2); ctx.stroke();
+          ctx.globalAlpha = 1; ctx.restore();
+        }
+        if (this.shieldLanes > 0) {
+          ctx.fillStyle = 'rgba(144,164,174,0.1)';
+          ctx.fillRect(cx - 30, cy - laneH * this.shieldLanes - laneH / 2, 60, laneH * (this.shieldLanes * 2 + 1));
+          ctx.strokeStyle = 'rgba(144,164,174,0.4)'; ctx.lineWidth = 2;
+          ctx.setLineDash([6, 4]);
+          ctx.strokeRect(cx - 30, cy - laneH * this.shieldLanes - laneH / 2, 60, laneH * (this.shieldLanes * 2 + 1));
+          ctx.setLineDash([]);
+        }
+        drawCartoonPlayer(ctx, cx, cy, this, false, this.shieldLanes);
+        const bw = 44, bh = 5, bx = cx - bw / 2, by = cy + 38;
+        ctx.fillStyle = '#2a1a40'; ctx.fillRect(bx, by, bw, bh);
+        const ratio = this.hp / this.maxHP;
+        ctx.fillStyle = ratio > 0.5 ? '#2ecc71' : ratio > 0.25 ? '#f0c040' : '#e03030';
+        ctx.fillRect(bx, by, bw * ratio, bh);
+      }
+    }
+
+    // ── ENEMY DEFS ──
+    const ENEMY_DEFS = {
+      benzema: { name: 'Benzema', initials: 'BEN', skinColor: '#c8905a', shirtColor: '#e8e8e8', shirtStripe: '#c0c0c0', speed: 0.35, hp: 1200, maxHP: 1200, damage: 8, attackRange: 350, meleeRange: 60, role: 'Tirador', color: '#e03030', stunAmount: 12 },
+      pepe: { name: 'Pepe', initials: 'PEP', skinColor: '#b07040', shirtColor: '#c0c0c0', shirtStripe: '#909090', speed: 0.20, hp: 2500, maxHP: 2500, damage: 7, attackRange: 60, meleeRange: 55, role: 'Tanque', color: '#888', stunAmount: 9 },
+      bale: { name: 'Bale', initials: 'BAL', skinColor: '#c0885a', shirtColor: '#2ecc71', shirtStripe: '#27ae60', speed: 0.55, hp: 800, maxHP: 800, damage: 12, attackRange: 60, meleeRange: 55, role: 'Sprinter', color: '#2ecc71', stunAmount: 15 },
+      modric: { name: 'Modric', initials: 'MOD', skinColor: '#d4956a', shirtColor: '#ffffff', shirtStripe: '#cccccc', speed: 0.30, hp: 1000, maxHP: 1000, damage: 10, attackRange: 60, meleeRange: 55, role: 'Saltador', color: '#5b8dee', stunAmount: 12, isVaulter: true, dodgesLeft: 3, vaultCooldown: 0, vaultJumping: false, vaultJumpY: 0 },
+      cristiano: { name: 'Cristiano', initials: 'CR7', skinColor: '#c09060', shirtColor: '#e03030', shirtStripe: '#b02020', speed: 0.60, hp: 5000, maxHP: 5000, damage: 250, attackRange: 60, meleeRange: 60, role: 'BOSS', color: '#f0c040', stunAmount: 20, isBoss: true },
+    };
+
+    class Enemy {
+      constructor(type, lane) {
+        const d = ENEMY_DEFS[type];
+        Object.assign(this, JSON.parse(JSON.stringify(d)));
+        this.type = type; this.lane = lane;
+        this.x = W() + 60; this.y = laneY(lane);
+        this.dead = false; this.attackTimer = 0;
+        this.swingAngle = 0; this.swinging = false; this.swingDir = 1;
+        this.stunned = 0;
+        this.isVaulter = d.isVaulter || false;
+        this.vaultCooldown = 0; this.vaultJumping = false;
+        this.vaultJumpY = 0; this.vaultJumpPhase = 0; this.vaultTarget = null;
+      }
+
+      update() {
+        if (this.dead || this.stunned > 0) { this.stunned--; return; }
+        this.attackTimer++;
+
+        if (this.isVaulter) {
+          if (this.vaultCooldown > 0) this.vaultCooldown--;
+          if (!this.vaultJumping && this.vaultCooldown <= 0) {
+            const blocker = players.find(p => p.lane === this.lane && p.x < this.x && this.x - p.x < 90);
+            if (blocker) {
+              this.vaultJumping = true; this.vaultJumpPhase = 0; this.vaultTarget = blocker;
+              spawnParticles(this.x, this.y, '#5b8dee', 5);
+            }
+          }
+          if (this.vaultJumping) {
+            this.vaultJumpPhase += 0.1;
+            this.vaultJumpY = -Math.sin(this.vaultJumpPhase) * 70;
+            this.x -= this.speed * 1.5;
+            if (this.vaultJumpPhase >= Math.PI) {
+              this.vaultJumping = false; this.vaultJumpY = 0; this.vaultCooldown = 180;
+              spawnParticles(this.x, this.y, '#5b8dee', 8);
+            }
+          } else {
+            this.x -= this.speed;
+            const closePlayer = players.filter(p => p.lane === this.lane && Math.abs(p.x - this.x) < this.meleeRange + 20).sort((a, b) => b.x - a.x)[0];
+            if (closePlayer) {
+              this.x = Math.max(this.x, closePlayer.x + 55);
+              if (this.attackTimer > 60) {
+                this.attackTimer = 0; this.swinging = true; this.swingAngle = 0;
+                closePlayer.hp -= this.damage; spawnParticles(closePlayer.x, closePlayer.y, '#e03030', 5);
+                if (closePlayer.hp <= 0) removePlayer(closePlayer);
+              }
+            }
+          }
+        } else {
+          const frontPlayer = players.filter(p => p.lane === this.lane && p.x < this.x).sort((a, b) => b.x - a.x)[0];
+          if (frontPlayer && this.x - frontPlayer.x < 100) {
+            this.x = frontPlayer.x + 85;
+            if (this.attackTimer > 60) {
+              this.attackTimer = 0; this.swinging = true; this.swingAngle = 0;
+              frontPlayer.hp -= this.damage; spawnParticles(frontPlayer.x, frontPlayer.y, '#e03030', 5);
+              if (frontPlayer.hp <= 0) removePlayer(frontPlayer);
+            }
+          } else {
+            this.x -= this.speed;
+            if (this.type === 'benzema') {
+              const targets = players.filter(p => p.lane === this.lane && p.x < this.x && this.x - p.x < this.attackRange).sort((a, b) => b.x - a.x);
+              if (targets.length && this.attackTimer > 70) {
+                this.attackTimer = 0; this.swinging = true; this.swingAngle = 0;
+                projectiles.push(new EnemyProjectile(this.x - 30, this.y, this.damage, this.lane));
+              }
+            }
+            const closePlayer = players.filter(p => p.lane === this.lane && Math.abs(p.x - this.x) < this.meleeRange + 20).sort((a, b) => b.x - a.x)[0];
+            if (closePlayer && this.type !== 'benzema') {
+              this.x = Math.max(this.x, closePlayer.x + 55);
+              if (this.attackTimer > 60) {
+                this.attackTimer = 0; this.swinging = true; this.swingAngle = 0;
+                closePlayer.hp -= this.damage; spawnParticles(closePlayer.x, closePlayer.y, '#e03030', 5);
+                if (closePlayer.hp <= 0) removePlayer(closePlayer);
+              }
+            }
+          }
+        }
+
+        if (this.swinging) {
+          this.swingAngle += 15 * this.swingDir;
+          if (Math.abs(this.swingAngle) > 60) this.swingDir *= -1;
+          if (this.swingAngle < -30 && this.swingDir === 1) { this.swinging = false; this.swingAngle = 0; this.swingDir = 1; }
+        }
+        if (this.x < 40) { baseHP -= 0.5; if (baseHP <= 0) gameOver(); }
+        if (this.type === 'cristiano' && this.x < 50 && !this._siuuu) { this._siuuu = true; showSIUUU(); }
+      }
+
+      takeDamage(dmg) {
+        if (this.dead) return;
+        if (this.type === 'modric' && this.dodgesLeft > 0 && !this.vaultJumping) {
+          this.dodgesLeft--;
+          this.vaultJumping = true;
+          this.vaultJumpPhase = 0;
+          spawnParticles(this.x, this.y, '#5b8dee', 5);
+          return;
+        }
+        if (this.type === 'modric' && this.vaultJumping) { spawnParticles(this.x, this.y, '#5b8dee', 3); return; }
+        this.stunned += (this.stunAmount || 12);
+        this.hp -= dmg;
+        spawnParticles(this.x, this.y, '#ffdd57', 4);
+        if (this.hp <= 0) {
+          this.dead = true; score += this.isBoss ? 500 : 50;
+          spawnParticles(this.x, this.y, this.color, 12);
+          document.getElementById('hud-score').textContent = score;
+        }
+      }
+
+      draw() {
+        if (this.dead) return;
+        const drawY = this.y + (this.vaultJumpY || 0);
+        drawCartoonEnemy(ctx, this.x, drawY, this, this.swingAngle);
+        const bw = 44, bh = 5;
+        ctx.fillStyle = '#2a1a40'; ctx.fillRect(this.x - bw / 2, drawY + 38, bw, bh);
+        ctx.fillStyle = this.hp / this.maxHP > 0.5 ? '#e03030' : this.hp / this.maxHP > 0.25 ? '#f0c040' : '#888';
+        ctx.fillRect(this.x - bw / 2, drawY + 38, bw * (this.hp / this.maxHP), bh);
+        if (this.isVaulter && this.vaultJumping) {
+          ctx.save(); ctx.strokeStyle = '#5b8dee'; ctx.lineWidth = 2;
+          ctx.setLineDash([4, 3]); ctx.beginPath(); ctx.arc(this.x, drawY, 28, 0, Math.PI * 2); ctx.stroke();
+          ctx.setLineDash([]); ctx.restore();
+        }
+      }
+    }
+
+    // ── PROJECTILE ──
+    class Projectile {
+      constructor(x, y, dir, dmg, targetLane, style, color, homing, target) {
+        this.x = x; this.y = y; this.dir = dir; this.dmg = dmg;
+        this.targetLane = targetLane; this.style = style; this.color = color;
+        this.homing = homing; this.target = target;
+        this.speed = 6; this.dead = false; this.rot = 0;
+        this.destY = laneY(targetLane);
+        this._isEnemy = false; this._redirected = false;
+      }
+      update() {
+        this.rot += 8;
+        if (this.homing && this.target && !this.target.dead) {
+          const dx = this.target.x - this.x, dy = this.target.y - this.y, d = Math.sqrt(dx * dx + dy * dy);
+          this.x += dx / d * this.speed; this.y += dy / d * this.speed;
+          this.targetLane = this.target.lane;
+        } else {
+          this.x += this.speed * this.dir;
+          this.y += (this.destY - this.y) * 0.12;
+        }
+        if (this.x > W() + 50 || this.x < -50) this.dead = true;
+        if (!this._isEnemy) {
+          const hit = enemies.find(e => !e.dead && e.lane === this.targetLane && Math.abs(e.x - this.x) < 24 && Math.abs(e.y - this.y) < 30);
+          if (hit) { hit.takeDamage(this.dmg); this.dead = true; }
+        } else {
+          const hit = players.find(p => p.lane === this.lane && Math.abs(p.x - this.x) < 26);
+          if (hit) { hit.hp -= this.dmg; spawnParticles(hit.x, hit.y, '#e03030', 4); this.dead = true; if (hit.hp <= 0) removePlayer(hit); }
+        }
+      }
+      draw() {
+        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot * Math.PI / 180);
+        if (this.style === 'ball-heavy') {
+          ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fillStyle = this.color; ctx.fill();
+          ctx.strokeStyle = '#fff2'; ctx.lineWidth = 2; ctx.stroke();
+          ctx.strokeStyle = 'rgba(0,0,0,0.3)'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(-8, 0); ctx.lineTo(8, 0); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, 8); ctx.stroke();
+        } else { drawBall(ctx, 0, 0, this.style === 'ball-small' ? 6 : 8, this.color); }
+        ctx.restore();
+      }
+    }
+
+    class EnemyProjectile {
+      constructor(x, y, dmg, lane) {
+        this.x = x; this.y = y; this.dmg = dmg; this.lane = lane;
+        this.speed = 4; this.dead = false; this.rot = 0;
+        this.destY = laneY(lane); this.dir = -1;
+        this._isEnemy = true; this._redirected = false;
+        this.targetLane = lane; this.homing = false;
+        this.style = 'ball'; this.color = '#e03030';
+      }
+      update() {
+        this.rot += 8; this.x -= this.speed; if (this.x < -20) this.dead = true;
+        const hit = players.find(p => p.lane === this.lane && Math.abs(p.x - this.x) < 26);
+        if (hit) { hit.hp -= this.dmg; spawnParticles(hit.x, hit.y, '#e03030', 4); this.dead = true; if (hit.hp <= 0) removePlayer(hit); }
+      }
+      draw() {
+        ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot * Math.PI / 180);
+        drawGuayo(ctx, 0, 0, -1, '#e03030'); ctx.restore();
+      }
+    }
+
+    // ── ENERGY DROP (soles) ──
+    class EnergyDrop {
+      constructor(x, y, value) {
+        // Si viene de Fabregas tiene posición fija, si es del cielo es aleatorio
+        if (x !== undefined) {
+          this.x = x; this.y = y; this.fromFab = true;
+        } else {
+          this.x = 100 + Math.random() * (W() - 200);
+          this.y = -20; this.fromFab = false;
+        }
+        this.vy = this.fromFab ? 1.2 : 0.7 + Math.random() * 0.5;
+        this.value = value || 10 + Math.floor(Math.random() * 15);
+        this.r = 20; this.dead = false;
+        this.pulse = Math.random() * Math.PI * 2;
+        this.landed = false; this.landY = 0;
+      }
+      update() {
+        this.pulse += 0.08;
+        this.y += this.vy;
+        if (this.y > H() + 50) this.dead = true;
+        // Auto-desaparece después de 15s si no la recolectan
+        if (!this._spawnTime) this._spawnTime = frameCount;
+        if (frameCount - this._spawnTime > 900) this.dead = true;
+      }
+      draw() {
+        if (this.dead) return;
+        const bob = this.landed ? Math.sin(this.pulse) * 3 : 0;
+        ctx.save();
+        ctx.shadowColor = '#f0c040'; ctx.shadowBlur = 16;
+        ctx.globalAlpha = 0.95;
+        // Sol circular
+        ctx.fillStyle = '#f0c040';
+        ctx.beginPath();
+        ctx.arc(this.x, this.y + bob, this.r + Math.sin(this.pulse) * 2, 0, Math.PI * 2);
+        ctx.fill();
+        // Rayos
+        ctx.strokeStyle = '#f0c040'; ctx.lineWidth = 3; ctx.globalAlpha = 0.6;
+        for (let i = 0; i < 8; i++) {
+          const a = i * Math.PI / 4 + this.pulse * 0.3;
+          const r1 = this.r + 4, r2 = this.r + 10;
+          ctx.beginPath();
+          ctx.moveTo(this.x + Math.cos(a) * r1, this.y + bob + Math.sin(a) * r1);
+          ctx.lineTo(this.x + Math.cos(a) * r2, this.y + bob + Math.sin(a) * r2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+        // Numero
+        ctx.fillStyle = '#0e0618';
+        ctx.font = 'bold 11px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.shadowBlur = 0;
+        ctx.fillText(this.value, this.x, this.y + bob);
+        ctx.globalAlpha = 1; ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+    }
+
+    // ── PARTICLES ──
+    class Particle {
+      constructor(x, y, color) { this.x = x; this.y = y; this.color = color; this.vx = (Math.random() - 0.5) * 5; this.vy = (Math.random() - 0.5) * 5; this.life = 30 + Math.random() * 20; this.maxLife = this.life; this.r = 3 + Math.random() * 4; }
+      update() { this.life--; this.x += this.vx; this.y += this.vy; this.vy += 0.15; }
+      draw() { ctx.globalAlpha = this.life / this.maxLife; ctx.fillStyle = this.color; ctx.beginPath(); ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2); ctx.fill(); ctx.globalAlpha = 1; }
+    }
+    function spawnParticles(x, y, color, n) { for (let i = 0; i < n; i++) particles.push(new Particle(x, y, color)); }
+
+    // ── DRAWING HELPERS ──
+    function drawBall(ctx, x, y, r, color) {
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+      ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.arc(x - r * 0.3, y - r * 0.3, r * 0.3, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
+    }
+    function drawCartoonHead(ctx, cx, cy, skinColor, size = 1) {
+      const r = 22 * size;
+      ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.beginPath(); ctx.ellipse(cx, cy + r + 4, r * 0.8, r * 0.25, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = skinColor; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)'; ctx.lineWidth = 2 * size; ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.ellipse(cx - 8 * size, cy - 3 * size, 5 * size, 5.5 * size, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx + 8 * size, cy - 3 * size, 5 * size, 5.5 * size, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1a0a2e';
+      ctx.beginPath(); ctx.arc(cx - 7 * size, cy - 3 * size, 3 * size, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 9 * size, cy - 3 * size, 3 * size, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(cx - 6 * size, cy - 5 * size, 1.5 * size, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 10 * size, cy - 5 * size, 1.5 * size, 0, Math.PI * 2); ctx.fill();
+      ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 2.5 * size; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(cx - 12 * size, cy - 10 * size); ctx.lineTo(cx - 4 * size, cy - 9 * size); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx + 4 * size, cy - 9 * size); ctx.lineTo(cx + 12 * size, cy - 10 * size); ctx.stroke();
+      ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 2 * size;
+      ctx.beginPath(); ctx.arc(cx, cy + 8 * size, 8 * size, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+    }
+    function drawCleat(ctx, cx, cy, facing, shirtColor) {
+      const dx = facing > 0 ? 1 : -1;
+      ctx.fillStyle = shirtColor; ctx.fillRect(cx - 8, cy + 20, 16, 16);
+      ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.ellipse(cx + dx * 5, cy + 36, 10, 6, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#333'; ctx.beginPath(); ctx.ellipse(cx - dx * 4, cy + 36, 9, 5, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff';
+      for (let s = -1; s <= 1; s += 2) { ctx.beginPath(); ctx.arc(cx + dx * 5 + s * 4, cy + 40, 2, 0, Math.PI * 2); ctx.fill(); }
+    }
+    function drawGuayo(ctx, cx, cy, angle, color) {
+      ctx.save(); ctx.translate(cx, cy); ctx.rotate(angle * Math.PI / 180);
+      ctx.fillStyle = '#1a1a1a'; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, -28); ctx.lineTo(8, -28); ctx.lineTo(10, 0); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#2a2a2a'; ctx.beginPath(); ctx.ellipse(4, -28, 9, 7, 0.2, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#fff'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(-4 + i * 4, -32, 2, 0, Math.PI * 2); ctx.fill(); }
+      ctx.strokeStyle = color; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(-5, -5); ctx.lineTo(-5, -22); ctx.stroke();
+      ctx.restore();
+    }
+    function drawCartoonPlayer(ctx, cx, cy, def, isEnemy = false, shieldLanes = 0) {
+      getLanes();
+      const facing = isEnemy ? -1 : 1;
+      ctx.save(); ctx.globalAlpha = 0.25; ctx.fillStyle = '#2ecc71';
+      ctx.beginPath(); ctx.ellipse(cx, cy + 34, 34, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.fillStyle = def.shirtColor; ctx.beginPath(); ctx.roundRect(cx - 12, cy + 20, 24, 22, 4); ctx.fill();
+      ctx.fillStyle = def.shirtStripe || def.shirtColor; ctx.fillRect(cx - 4, cy + 20, 8, 22);
+      drawCleat(ctx, cx, cy, facing, def.shirtColor);
+      drawCartoonHead(ctx, cx, cy - 2, def.skinColor);
+      ctx.fillStyle = 'rgba(14,6,24,0.8)'; ctx.beginPath(); ctx.roundRect(cx - 22, cy - 48, 44, 16, 3); ctx.fill();
+      ctx.fillStyle = def.borderColor || def.color || '#f0c040';
+      ctx.font = 'bold 9px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(def.initials, cx, cy - 40);
+    }
+    function drawCartoonEnemy(ctx, cx, cy, def, swingAngle) {
+      ctx.save(); ctx.globalAlpha = 0.22; ctx.fillStyle = '#662222';
+      ctx.beginPath(); ctx.ellipse(cx, cy + 34, 34, 10, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.fillStyle = def.shirtColor; ctx.beginPath(); ctx.roundRect(cx - 12, cy + 20, 24, 22, 4); ctx.fill();
+      ctx.fillStyle = def.shirtStripe || def.shirtColor; ctx.fillRect(cx - 4, cy + 20, 8, 22);
+      drawCleat(ctx, cx, cy, -1, def.shirtColor);
+      ctx.save(); ctx.translate(cx - 18, cy + 10); drawGuayo(ctx, 0, 0, swingAngle - 30, def.color); ctx.restore();
+      ctx.save(); ctx.globalAlpha = 0.92; drawCartoonHead(ctx, cx, cy - 2, def.skinColor, 1); ctx.restore();
+      ctx.fillStyle = 'rgba(224,48,48,0.7)';
+      ctx.beginPath(); ctx.arc(cx - 7, cy - 5, 3, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(cx + 9, cy - 5, 3, 0, Math.PI * 2); ctx.fill();
+      if (def.isBoss) {
+        ctx.fillStyle = def.color; ctx.font = 'bold 16px Inter'; ctx.textAlign = 'center'; ctx.fillText('👑', cx, cy - 50);
+        ctx.font = 'bold 10px Inter'; ctx.fillStyle = def.color; ctx.fillText('CR7', cx, cy - 60);
+      }
+      ctx.fillStyle = 'rgba(80,10,10,0.85)'; ctx.beginPath(); ctx.roundRect(cx - 22, cy - 48, 44, 16, 3); ctx.fill();
+      ctx.fillStyle = '#ff7070'; ctx.font = 'bold 9px Inter'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(def.initials, cx, cy - 40);
+    }
+
+    // ── WAVE CONFIG — escala por nivel ──
+    // Nivel 1: 0 sol inicial, pocos enemigos lentos
+    // Cada nivel: más enemigos, más velocidad, spawns más rápidos
+    function getLevelConfig(lvl) {
+      // Base enemies per sub-wave, escalando
+      const configs = [
+        // Nivel 1
+        [['benzema', 'benzema'], ['benzema', 'bale'], ['benzema', 'pepe']],
+        // Nivel 2 — más enemigos
+        [['benzema', 'benzema', 'bale'], ['benzema', 'bale', 'modric'], ['benzema', 'pepe', 'benzema', 'bale']],
+        // Nivel 3
+        [['benzema', 'benzema', 'bale', 'bale'], ['benzema', 'modric', 'bale', 'pepe'], ['benzema', 'bale', 'pepe', 'benzema', 'modric']],
+        // Nivel 4
+        [['benzema', 'bale', 'modric', 'benzema', 'pepe'], ['bale', 'modric', 'pepe', 'bale', 'benzema', 'modric'], ['benzema', 'pepe', 'bale', 'modric', 'benzema', 'pepe', 'bale', 'modric']],
+        // Nivel 5 — boss
+        [['benzema', 'bale', 'modric', 'benzema', 'pepe', 'bale'], ['bale', 'modric', 'pepe', 'bale', 'modric', 'pepe', 'benzema', 'bale', 'modric'], ['cristiano']],
+      ];
+      return configs[Math.min(lvl - 1, configs.length - 1)];
+    }
+
+    // Velocidad de spawn escala: nivel 1 = lento, nivel 5 = muy rápido
+    function getSpawnDelay() {
+      // Nivel 1: 900-1200 frames (~15-20s), Nivel 5: 240-360 frames (~4-6s)
+      const base = Math.max(240, 900 - (level - 1) * 150);
+      return base + Math.floor(Math.random() * (base * 0.3));
+    }
+
+    // Speed multiplier por nivel (aplica al crear enemigos)
+    function getEnemySpeedMult() {
+      return 1 + (level - 1) * 0.22; // nivel 1: x1, nivel 5: x1.88
+    }
+
+    function getCurrentWave() {
+      const cfg = getLevelConfig(level);
+      return cfg[subWave - 1] || [];
+    }
+
+    // Actualiza la vista previa de la próxima oleada en HUD
+    function updateNextWavePreview() {
+      const list = document.getElementById('next-wave-list');
+      if (!list) return;
+      list.innerHTML = '';
+      const upcoming = getCurrentWave();
+      upcoming.slice(0,6).forEach(t => {
+        const el = document.createElement('div');
+        el.style.cssText = 'background:rgba(255,255,255,0.03);padding:6px 8px;border-radius:6px;font-size:0.75rem;color:#ddd;';
+        el.textContent = t.charAt(0).toUpperCase() + t.slice(1,4);
+        list.appendChild(el);
+      });
+    }
+
+    // ── RESET AL INICIO O ENTRE NIVELES ──
+    function resetForLevel(fullReset) {
+      getLanes();
+      players = [];
+      enemies = [];
+      projectiles = [];
+      particles = [];
+      energyDrops = [];
+      spawnCount = 0;
+      spawnTimer = 0;
+      bossSpawned = false;
+      waitingForNextSubWave = false;
+      subWaveDelay = 0;
+      messiUsed = false;
+      if (fullReset) {
+        energy = 0; score = 0; baseHP = 100; level = 1; subWave = 1;
+        coachUsed = { pep: false, lui: false, sca: false };
+        coachCooldowns = { pep: 0, lui: 0, sca: 0 };
+      }
+      nextSpawnAt = getSpawnDelay();
+      document.getElementById('hud-wave').textContent = level;
+      document.getElementById('hud-subwave').textContent = subWave + '/' + totalSubWaves;
+      document.getElementById('hud-score').textContent = score;
+      document.getElementById('hud-energy').textContent = Math.floor(energy);
+      document.getElementById('hp-fill').style.width = Math.max(0, baseHP) + '%';
+      document.getElementById('energy-fill').style.width = Math.min(100, energy / 200 * 100) + '%';
+      updateCoachBtns();
+      updateNextWavePreview();
+    }
+
+    // ── PANEL DE JUGADORES ──
+    let selectedPlayerType = null;
+
+    function buildPanel() {
+      const panel = document.createElement('div');
+      panel.id = 'player-panel';
+      panel.style.cssText = `position:fixed;left:12px;top:70px;z-index:120;display:flex;flex-direction:column;gap:6px;align-items:center;backdrop-filter:blur(6px);padding:6px;border-radius:8px;width:70px;height:auto;max-height:calc(100vh - 200px);overflow-y:auto;overflow-x:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.4);`;
+      // Toggle button to collapse/expand the panel (top-left)
+      const toggle = document.createElement('button');
+      toggle.id = 'player-panel-toggle';
+      toggle.textContent = 'Tarjetas';
+      toggle.style.cssText = 'position:fixed;left:12px;top:60px;z-index:121;background:rgba(0,0,0,0.6);color:#f0c040;border:1px solid rgba(240,192,64,0.15);padding:4px 8px;border-radius:4px;cursor:pointer;font-family:\'Bebas Neue\',cursive;font-size:0.7rem;';
+      toggle.onclick = () => { panel.style.display = panel.style.display === 'none' ? 'flex' : 'none'; updateGridOffset(); };
+      document.body.appendChild(toggle);
+      Object.entries(PLAYER_DEFS).forEach(([type, def]) => {
+        const card = document.createElement('div');
+        card.className = 'player-card';
+        card.id = 'pbtn-' + type;
+        const imgSrcMap = { neymar: 'uploads/NEYMAR.jpg', suarez: 'uploads/SUAREZ.jpg', iniesta: 'uploads/INIESTA.webp', fabregas: 'uploads/FABREGAS.webp', mascherano: 'uploads/MASCHERANO.avif' };
+        const img = imgSrcMap[type] ? `<img src="${imgSrcMap[type]}" alt="${def.name}">` : '<div style="height:80px"></div>';
+        card.innerHTML = `${img}<div class="pname">${def.name}</div><div class="prole">${def.role}</div><div class="pcost" id="cost-${type}">☀ ${def.cost}</div>`;
+        card.onclick = (ev) => {
+          // prevent clicks from propagating to canvas
+          ev.stopPropagation();
+          selectedPlayerType = type;
+          document.querySelectorAll('.player-card').forEach(b => b.classList.remove('selected'));
+          card.classList.add('selected');
+        };
+        panel.appendChild(card);
+      });
+      document.body.appendChild(panel);
+      // ensure grid offset uses panel width
+      updateGridOffset();
+    }
+
+    function updateGridOffset() {
+      const panel = document.getElementById('player-panel');
+      if (!panel) return;
+      const rect = panel.getBoundingClientRect();
+      // leave 8px margin between panel and grid, panel es más estrecho ahora
+      GRID_START_X = Math.max(100, rect.right + 8);
+    }
+
+    function removePlayer(p) {
+      const idx = players.indexOf(p);
+      if (idx > -1) players.splice(idx, 1);
+    }
+
+    // ── CANVAS EVENTS ──
+    canvas.addEventListener('mousemove', e => {
+      if (state !== 'playing' && state !== 'repositioning') return;
+      const cx = e.clientX, cy = e.clientY - 60;
+      const lane = Math.floor(cy / laneH);
+      const slot = getSlotFromX(cx);
+      hoverCell = { lane, slot };
+
+      // Reposicionamiento: mover jugador arrastrado
+      if (state === 'repositioning' && dragPlayer) {
+        dragPlayer.x = cx;
+        dragPlayer.y = cy;
+        // snap visual de carril
+        const snapLane = Math.max(0, Math.min(LANES - 1, Math.floor(cy / laneH)));
+        dragPlayer.lane = snapLane;
+      }
+    });
+
+    canvas.addEventListener('mousedown', e => {
+      if (state === 'repositioning') {
+        const cx = e.clientX, cy = e.clientY - 60;
+        // Busca el jugador más cercano al click
+        dragPlayer = players.find(p => Math.abs(p.x - cx) < 40 && Math.abs(p.y - cy) < 50) || null;
+        if (dragPlayer) {
+          dragOffsetX = cx - dragPlayer.x;
+          dragOffsetY = cy - dragPlayer.y;
+        }
+      }
+    });
+
+    canvas.addEventListener('mouseup', e => {
+      if (state === 'repositioning' && dragPlayer) {
+        const cx = e.clientX, cy = e.clientY - 60;
+        // FIX GUARDIOLA: el jugador queda EXACTAMENTE donde lo sueltas
+        const finalLane = Math.max(0, Math.min(LANES - 1, Math.floor(cy / laneH)));
+        const finalSlot = getSlotFromX(cx);
+        // Verificar si el slot final ya está ocupado por otro jugador
+        const conflict = players.find(p => p !== dragPlayer && p.lane === finalLane && p.slot === finalSlot);
+        if (conflict) {
+          // Intercambiar posiciones
+          const tmpLane = conflict.lane, tmpSlot = conflict.slot, tmpX = conflict.x, tmpY = conflict.y;
+          conflict.lane = dragPlayer.lane; conflict.slot = dragPlayer.slot; conflict.x = dragPlayer.x; conflict.y = dragPlayer.y;
+          dragPlayer.lane = tmpLane; dragPlayer.slot = tmpSlot;
+        } else {
+          dragPlayer.lane = finalLane;
+          dragPlayer.slot = finalSlot;
+        }
+        // Posición final con snap
+        dragPlayer.x = getSlotX(dragPlayer.slot);
+        dragPlayer.y = laneY(dragPlayer.lane);
+        lightCell(dragPlayer.lane, dragPlayer.slot);
+        dragPlayer = null;
+      }
+    });
+
+    canvas.addEventListener('click', e => {
+      if (state !== 'playing') return;
+      const cx = e.clientX, cy = e.clientY - 60;
+
+      // Recolectar soles
+      for (let i = energyDrops.length - 1; i >= 0; i--) {
+        const d = energyDrops[i];
+        const dist = Math.sqrt((d.x - cx) ** 2 + (d.y - cy) ** 2);
+        if (dist < d.r + 14) {
+          energy = Math.min(maxEnergy, energy + d.value);
+          spawnParticles(d.x, d.y, '#f0c040', 8);
+          d.dead = true; energyDrops.splice(i, 1);
+          return;
+        }
+      }
+
+      // Colocar jugador
+      if (!selectedPlayerType) return;
+      const lane = Math.floor(cy / laneH);
+      if (lane < 0 || lane >= LANES) return;
+      const slot = getSlotFromX(cx);
+      const occupied = players.some(p => p.lane === lane && p.slot === slot);
+      if (occupied) { showMsg('¡Espacio ocupado!'); return; }
+      const cost = getPlacementCost(selectedPlayerType, lane);
+      if (energy < cost) { showMsg(`☀ Necesitas ${cost} — tienes ${Math.floor(energy)}`); return; }
+      energy -= cost;
+      const p = new Player(selectedPlayerType, lane, slot);
+      players.push(p);
+      lightCell(lane, slot);
+      spawnParticles(p.x, p.y, PLAYER_DEFS[selectedPlayerType].borderColor, 6);
+      selectedPlayerType = null;
+      document.querySelectorAll('.player-card').forEach(b => b.classList.remove('selected'));
+      updateCoachBtns();
+    });
+
+    // ── COACHES ──
+    function updateCoachBtns() {
+      const hasIniesta = players.some(p => p.type === 'iniesta');
+      document.getElementById('btn-pep').classList.toggle('disabled', !hasIniesta || coachCooldowns.pep > 0 || coachUsed.pep);
+      document.getElementById('btn-lui').classList.toggle('disabled', coachCooldowns.lui > 0 || coachUsed.lui);
+      document.getElementById('btn-sca').classList.toggle('disabled', coachCooldowns.sca > 0 || coachUsed.sca);
+    }
+
+    // Cost calculation: aumenta coste por jugadores ya colocados en la misma fila (desincentiva spam)
+    function getPlacementCost(type, lane) {
+      const base = PLAYER_DEFS[type].cost || 0;
+      const inLane = players.filter(p => p.lane === lane).length;
+      const mult = 1 + inLane * 0.12; // +12% por jugador en la fila
+      return Math.ceil(base * mult);
+    }
+
+    function activateCoach(id) {
+      if (coachCooldowns[id] > 0 || coachUsed[id]) return;
+      if (id === 'pep') {
+        if (!players.some(p => p.type === 'iniesta')) { showMsg('¡Necesitas a Iniesta!'); return; }
+        coachUsed.pep = true; guardiolaTimer = 420; coachCooldowns.pep = 1200;
+        state = 'repositioning';
+        document.getElementById('reposition-msg').style.display = 'block';
+        setTimeout(() => {
+          state = 'playing';
+          document.getElementById('reposition-msg').style.display = 'none';
+          document.getElementById('btn-pep').classList.remove('active');
+          dragPlayer = null;
+          // Snap todos los jugadores a su slot correcto
+          players.forEach(p => { p.x = getSlotX(p.slot); p.y = laneY(p.lane); });
+        }, 7000);
+      }
+      if (id === 'lui') {
+        coachUsed.lui = true; luisTimer = 600; coachCooldowns.lui = 1500;
+        players.forEach(p => { if (p.type === 'neymar' || p.type === 'suarez') p.boosted = true; });
+      }
+      if (id === 'sca') {
+        coachUsed.sca = true; scaloniTimer = 900; coachCooldowns.sca = 1800;
+        const mas = players.find(p => p.type === 'mascherano');
+        if (mas) mas.shieldLanes = 1;
+      }
+      document.getElementById('btn-' + id).classList.add('active');
+      updateCoachBtns();
+    }
+
+    function showMsg(txt) {
+      const el = document.createElement('div');
+      const isSuccess = txt.includes('✅');
+      const bgColor = isSuccess ? 'rgba(46,204,113,0.9)' : 'rgba(200,30,30,0.9)';
+      el.style.cssText = `position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:${bgColor};color:#fff;font-family:'Bebas Neue',cursive;font-size:1rem;letter-spacing:2px;padding:12px 28px;border-radius:6px;z-index:200;box-shadow:0 8px 24px rgba(0,0,0,0.5);border:1px solid ${isSuccess ? 'rgba(92,230,141,0.5)' : 'rgba(255,150,150,0.5)'}`;
+      el.textContent = txt; document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2500);
+    }
+
+    // ── BACKGROUND con CUADRICULA VISIBLE ──
+    function drawBackground() {
+      getLanes();
+      const stadium = STADIUMS[level - 1] || STADIUMS[0];
+
+      ctx.fillStyle = '#0e0618';
+      ctx.fillRect(0, 0, W(), H());
+
+      // Franjas de césped alternadas — más anchas y brillantes
+      for (let i = 0; i < LANES; i++) {
+        ctx.fillStyle = i % 2 === 0 ? stadium.grass : stadium.grassAlt;
+        ctx.fillRect(0, i * laneH, W(), laneH);
+      }
+
+      // ── CUADRICULA DEL CAMPO — bien visible ──
+      const cellW = GRID_SLOT_W;
+      const cellH = laneH;
+
+      // Primero dibuja fondo de celdas con color sutil alternado
+      for (let row = 0; row < LANES; row++) {
+        for (let col = 0; col < NUM_SLOTS; col++) {
+          const cx2 = GRID_START_X - GRID_SLOT_W / 2 + col * GRID_SLOT_W;
+          const cy2 = row * laneH;
+          // Color alternado en tablero — más visible
+          const even = (row + col) % 2 === 0;
+          ctx.fillStyle = even ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.08)';
+          ctx.fillRect(cx2, cy2, cellW, cellH);
+        }
+      }
+
+      // Celdas iluminadas (al colocar jugadores)
+      litCells = litCells.filter(c => {
+        c.timer--;
+        if (c.timer <= 0) return false;
+        const a = c.timer / 45;
+        const cx2 = GRID_START_X - GRID_SLOT_W / 2 + c.slot * GRID_SLOT_W;
+        const cy2 = c.lane * laneH;
+        ctx.fillStyle = `rgba(240,192,64,${a * 0.35})`;
+        ctx.fillRect(cx2, cy2, cellW, cellH);
+        ctx.strokeStyle = `rgba(240,192,64,${a * 0.9})`;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx2 + 1, cy2 + 1, cellW - 2, cellH - 2);
+        return true;
+      });
+
+      // Celda hover — resaltado suave
+      if (hoverCell.lane >= 0 && hoverCell.lane < LANES && state === 'playing' && selectedPlayerType) {
+        const cx2 = GRID_START_X - GRID_SLOT_W / 2 + hoverCell.slot * GRID_SLOT_W;
+        const cy2 = hoverCell.lane * laneH;
+        const isOccupied = players.some(p => p.lane === hoverCell.lane && p.slot === hoverCell.slot);
+        ctx.fillStyle = isOccupied ? 'rgba(255,60,60,0.18)' : 'rgba(240,192,64,0.18)';
+        ctx.fillRect(cx2, cy2, cellW, cellH);
+        ctx.strokeStyle = isOccupied ? 'rgba(255,80,80,0.7)' : 'rgba(240,192,64,0.7)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cx2 + 1, cy2 + 1, cellW - 2, cellH - 2);
+      }
+
+      // Líneas de la cuadrícula — VISIBLES y mejoradas
+      ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+      ctx.lineWidth = 1.2;
+      // Verticales
+      for (let col = 0; col <= NUM_SLOTS; col++) {
+        const x = GRID_START_X - GRID_SLOT_W / 2 + col * GRID_SLOT_W;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H()); ctx.stroke();
+      }
+      // Horizontales (carriles)
+      for (let row = 1; row < LANES; row++) {
+        ctx.beginPath(); ctx.moveTo(0, row * laneH); ctx.lineTo(W(), row * laneH); ctx.stroke();
+      }
+
+      // Líneas del campo de fútbol — colores vivos
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 2;
+      // Portería izquierda
+      ctx.beginPath(); ctx.moveTo(50, H() * 0.25); ctx.lineTo(50, H() * 0.75); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(20, H() * 0.25); ctx.lineTo(50, H() * 0.25); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(20, H() * 0.75); ctx.lineTo(50, H() * 0.75); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(20, H() * 0.25); ctx.lineTo(20, H() * 0.75); ctx.stroke();
+      // Línea defensiva
+      ctx.strokeStyle = 'rgba(240,192,64,0.5)';
+      ctx.setLineDash([8, 4]);
+      ctx.beginPath(); ctx.moveTo(GRID_START_X - GRID_SLOT_W / 2, 0); ctx.lineTo(GRID_START_X - GRID_SLOT_W / 2, H()); ctx.stroke();
+      ctx.setLineDash([]);
+      // Línea centro
+      ctx.strokeStyle = 'rgba(255,255,255,0.2)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(W() / 2, 0); ctx.lineTo(W() / 2, H()); ctx.stroke();
+      ctx.beginPath(); ctx.arc(W() / 2, H() / 2, 80, 0, Math.PI * 2); ctx.stroke();
+      // Línea spawn enemigos
+      ctx.strokeStyle = 'rgba(255,100,100,0.35)'; ctx.setLineDash([6, 6]);
+      ctx.beginPath(); ctx.moveTo(W() - 50, 0); ctx.lineTo(W() - 50, H()); ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Portería derecha — zona de derrota
+      ctx.fillStyle = 'rgba(255,100,100,0.08)';
+      ctx.fillRect(W() - 80, H() * 0.2, 80, H() * 0.6);
+
+      // Watermark estadio
+      ctx.save(); ctx.globalAlpha = 0.04; ctx.fillStyle = '#ffffff';
+      ctx.font = `bold ${Math.min(W() / 8, 80)}px 'Bebas Neue',cursive`;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText((stadium.name || '').toUpperCase(), W() / 2, H() / 2);
+      ctx.globalAlpha = 1; ctx.restore();
+    }
+
+    // ── SPAWN ──
+    function spawnEnemy() {
+      const waveEnemies = getCurrentWave();
+      if (spawnCount >= waveEnemies.length) return;
+      const type = waveEnemies[spawnCount];
+      const lane = Math.floor(Math.random() * LANES);
+      const e = new Enemy(type, lane);
+      // Aplicar multiplicador de velocidad por nivel
+      e.speed *= getEnemySpeedMult();
+      enemies.push(e);
+      spawnCount++;
+      document.getElementById('hud-enemies').textContent = enemies.filter(e => !e.dead).length;
+      nextSpawnAt = spawnTimer + getSpawnDelay();
+    }
+
+    // ── WAVE LOGIC ──
+    function checkWaveEnd() {
+      const waveEnemies = getCurrentWave();
+      if (spawnCount >= waveEnemies.length && enemies.every(e => e.dead) && !waitingForNextSubWave) {
+        waitingForNextSubWave = true; subWaveDelay = 120;
+      }
+    }
+
+    function tickWaveProgress() {
+      if (!waitingForNextSubWave) return;
+      subWaveDelay--;
+      if (subWaveDelay > 0) return;
+      waitingForNextSubWave = false;
+
+      if (subWave < totalSubWaves) {
+        subWave++; spawnCount = 0; spawnTimer = 0;
+        nextSpawnAt = getSpawnDelay();
+        enemies = []; projectiles = [];
+        document.getElementById('hud-subwave').textContent = subWave + '/' + totalSubWaves;
+        showWaveAnnounce('OLEADA ' + subWave);
+        saveProgress();
+          updateNextWavePreview();
+      } else {
+        // NIVEL COMPLETADO — resetear tablero, más enemigos en el siguiente nivel
+        if (level < totalLevels) {
+          level++;
+          subWave = 1;
+          spawnCount = 0;
+          spawnTimer = 0;
+          // RESET TOTAL DEL TABLERO: jugadores, enemigos, proyectiles, energía a 0
+          players = [];
+          enemies = [];
+          projectiles = [];
+          energyDrops = [];
+          particles = [];
+          energy = 0;
+          nextSpawnAt = getSpawnDelay();
+          messiUsed = false;
+          bossSpawned = false;
+          coachUsed = { pep: false, lui: false, sca: false };
+          coachCooldowns = { pep: 0, lui: 0, sca: 0 };
+          document.getElementById('btn-pep').classList.remove('active');
+          document.getElementById('btn-lui').classList.remove('active');
+          document.getElementById('btn-sca').classList.remove('active');
+          document.getElementById('hud-wave').textContent = level;
+          document.getElementById('hud-subwave').textContent = '1/' + totalSubWaves;
+          document.getElementById('energy-fill').style.width = '0%';
+          document.getElementById('hud-energy').textContent = '0';
+          const stadium = STADIUMS[level - 1];
+          showWaveAnnounce('NIVEL ' + level + ' — ¡NUEVO CAMPO!');
+          setTimeout(() => showStadiumName(stadium.name), 1000);
+          showMsg('⚠ Tablero reiniciado — recolecta soles para volver a colocar jugadores');
+          saveProgress();
+          updateCoachBtns();
+        } else {
+          saveProgress();
+          setTimeout(() => gameWin(), 1500);
+        }
+      }
+    }
+
+    // ── MESSI SAVE ──
+    function checkMessi() {
+      if (messiUsed || level === 5) return;
+      const reached = enemies.find(e => !e.dead && e.x < 120);
+      if (reached) {
+        messiUsed = true;
+        enemies.forEach(e => { if (!e.dead) { e.dead = true; spawnParticles(e.x, e.y, '#f0c040', 16); score += 30; } });
+        showWaveAnnounce('MESSI — LIMPIA TODO');
+      }
+    }
+
+    // ── TIMERS ──
+    function tickTimers() {
+      Object.keys(coachCooldowns).forEach(k => { if (coachCooldowns[k] > 0) coachCooldowns[k]--; });
+      if (luisTimer > 0) {
+        luisTimer--;
+        if (luisTimer === 0) { players.forEach(p => p.boosted = false); document.getElementById('btn-lui').classList.remove('active'); }
+        document.getElementById('timer-lui').textContent = luisTimer > 0 ? Math.ceil(luisTimer / 60) + 's' : '';
+      }
+      if (scaloniTimer > 0) {
+        scaloniTimer--;
+        if (scaloniTimer === 0) { players.forEach(p => p.shieldLanes = 0); document.getElementById('btn-sca').classList.remove('active'); }
+        document.getElementById('timer-sca').textContent = scaloniTimer > 0 ? Math.ceil(scaloniTimer / 60) + 's' : '';
+      }
+      if (guardiolaTimer > 0) {
+        guardiolaTimer--;
+        document.getElementById('timer-pep').textContent = guardiolaTimer > 0 ? Math.ceil(guardiolaTimer / 60) + 's' : '';
+      }
+
+      // HUD
+      document.getElementById('energy-fill').style.width = Math.min(100, energy / 200 * 100) + '%';
+      document.getElementById('hud-energy').textContent = Math.floor(energy);
+      document.getElementById('hp-fill').style.width = Math.max(0, baseHP) + '%';
+      document.getElementById('hud-enemies').textContent = enemies.filter(e => !e.dead).length;
+
+      // Colores de costo
+      Object.entries(PLAYER_DEFS).forEach(([type, def]) => {
+        const costEl = document.getElementById('cost-' + type);
+        if (costEl) {
+          // Muestra en color si puedes comprar al menos en alguna fila (mínimo)
+          const minPossible = Math.min(...Array.from({length:LANES},(_,i)=>getPlacementCost(type,i)));
+          costEl.style.color = energy >= minPossible ? '#f0c040' : '#e03030';
+          costEl.textContent = `☀ ${def.cost}`;
+        }
+      });
+
+      // Soles del cielo — caen periódicamente (sin Fabregas)
+      energyDropTimer++;
+      // Cada 10 segundos cae un sol del cielo
+      if (energyDropTimer >= 600) {
+        energyDropTimer = 0;
+        energyDrops.push(new EnergyDrop());
+      }
+      // NOTA: NO hay auto-generación de energía — solo soles clickeables
+    }
+
+    // ── WAVE ANNOUNCE ──
+    function showWaveAnnounce(txt) {
+      const el = document.getElementById('wave-announce');
+      el.textContent = txt; el.style.opacity = '1';
+      setTimeout(() => el.style.opacity = '0', 2200);
+    }
+    function showStadiumName(name) {
+      const el = document.getElementById('stadium-name');
+      el.textContent = '📍 ' + name; el.style.opacity = '1';
+      setTimeout(() => el.style.opacity = '0', 3000);
+    }
+    function showSIUUU() {
+      const el = document.getElementById('wave-announce');
+      el.textContent = 'SIIIUUU'; el.style.color = '#e03030'; el.style.fontSize = '5rem'; el.style.opacity = '1';
+      setTimeout(() => { el.style.opacity = '0'; el.style.color = '#f0c040'; el.style.fontSize = '4rem'; setTimeout(() => gameOver(), 500); }, 2500);
+    }
+
+    // ── GAME LOOP ──
+    function togglePause() {
+      if (state !== 'playing' && state !== 'repositioning') return;
+      isPaused = !isPaused;
+      const pauseMenu = document.getElementById('pause-menu');
+      pauseMenu.style.display = isPaused ? 'flex' : 'none';
+    }
+
+    function saveAndShow() {
+      saveProgress();
+      showMsg('✅ ¡Progreso guardado exitosamente!');
+      if (isPaused) {
+        setTimeout(() => togglePause(), 800);
+      }
+    }
+
+    function loop() {
+      ctx.clearRect(0, 0, W(), H());
+      getLanes();
+      drawBackground();
+
+      if (state === 'playing' || state === 'repositioning') {
+        if (isPaused) {
+          requestAnimationFrame(loop);
+          return;
+        }
+        frameCount++;
+        if (state === 'playing') {
+          if (players.length > 0 || spawnCount > 0) {
+            spawnTimer++;
+          }
+          const waveEnemies = getCurrentWave();
+          // Boss
+          if (level === 5 && subWave === 3 && !bossSpawned && spawnCount === 0) {
+            bossSpawned = true;
+            const e = new Enemy('cristiano', Math.floor(LANES / 2));
+            enemies.push(e); spawnCount = 1;
+          }
+          if (spawnCount < waveEnemies.length && spawnTimer >= nextSpawnAt) spawnEnemy();
+          checkMessi();
+          checkWaveEnd();
+          tickWaveProgress();
+        }
+        players.forEach(p => p.update());
+        enemies.forEach(e => e.update());
+        projectiles = projectiles.filter(p => { p.update(); return !p.dead; });
+        particles = particles.filter(p => { p.life > 0; p.update(); return p.life > 0; });
+        energyDrops = energyDrops.filter(d => { d.update(); return !d.dead; });
+        tickTimers();
+
+        particles.forEach(p => p.draw());
+        energyDrops.forEach(d => d.draw());
+        projectiles.forEach(p => p.draw());
+        players.forEach(p => p.draw());
+        enemies.forEach(e => e.draw());
+
+        if (state === 'repositioning') {
+          ctx.fillStyle = 'rgba(240,192,64,0.04)'; ctx.fillRect(0, 0, W(), H());
+          ctx.strokeStyle = 'rgba(240,192,64,0.3)'; ctx.lineWidth = 2; ctx.setLineDash([10, 6]);
+          ctx.strokeRect(5, 5, W() - 10, H() - 10); ctx.setLineDash([]);
+        }
+      }
+      requestAnimationFrame(loop);
+    }
+
+    function gameOver() {
+      state = 'gameover';
+      const ov = document.getElementById('overlay');
+      ov.innerHTML = `<h1 style="color:#e03030">DERROTA</h1>
+  <p style="color:#ff9999">La horda cruzó tu línea. Score: <strong style="color:var(--gold)">${score}</strong></p>
+  <button class="btn" onclick="location.reload()">Reintentar</button>`;
+      ov.style.display = 'flex';
+    }
+    function gameWin() {
+      state = 'win';
+      const ov = document.getElementById('overlay');
+      ov.innerHTML = `<h1 style="color:var(--gold)">VICTORIA</h1>
+  <p>Detuviste a Cristiano en el Bernabéu. Score: <strong style="color:var(--gold)">${score}</strong></p>
+  <button class="btn" onclick="location.reload()">Jugar de nuevo</button>`;
+      ov.style.display = 'flex';
+    }
+
+    function startGame() {
+      document.getElementById('overlay').style.display = 'none';
+      state = 'playing';
+      getLanes();
+      resetForLevel(true);
+      showWaveAnnounce('OLEADA 1');
+      showStadiumName(STADIUMS[0].name);
+    }
+
+    // ── CONTROLES DE TECLADO ──
+    document.addEventListener('keydown', e => {
+      if (e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        if (state === 'playing' || state === 'repositioning') togglePause();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault();
+        if (state === 'playing' || state === 'repositioning') saveAndShow();
+      }
+    });
+
+    loadProgress();
+    buildPanel();
+    loop();
+  </script>
+</body>
+
+</html>
